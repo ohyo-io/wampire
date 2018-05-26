@@ -1,15 +1,15 @@
 [package]
-name = "wamp"
+name = "wampire"
 version = "0.1.0"
-authors = ["Daniel Yule <yule@cs.dal.ca>"]
+authors = ["Dudochkin Victor <dudochkin.victor@gmail.com>", "Daniel Yule <yule@cs.dal.ca>"]
 license = "MIT"
-homepage = "https://github.com/dyule/wamp-rs"
-repository = "https://github.com/dyule/wamp-rs"
+homepage = "https://github.com/ohyo-io/wampire"
+repository = "https://github.com/ohyo-io/wampire"
 description = "A WAMP client and router implenting the basic WAMP profile"
-keywords = ["rpc", "pubsub", "wamp"]
+keywords = ["rpc", "pubsub", "wamp", "wamp2"]
 
 [lib]
-name = "wamp"
+name = "wampire"
 path = "src/lib.rs"
 
 
