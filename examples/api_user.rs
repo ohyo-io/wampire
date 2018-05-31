@@ -1,7 +1,7 @@
-extern crate wamp;
+extern crate wampire;
 extern crate eventual;
-use wamp::client::{Connection, Client};
-use wamp::{URI, Value, ArgList};
+use wampire::client::{Connection, Client};
+use wampire::{URI, Value, ArgList};
 use std::io;
 use eventual::Async;
 

@@ -1,6 +1,6 @@
-extern crate wamp;
+extern crate wampire;
 
-use wamp::router::Router;
+use wampire::router::Router;
 extern crate env_logger;
 #[macro_use]
 extern crate log;

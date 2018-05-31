@@ -1,17 +1,19 @@
 [package]
 name = "wampire"
-version = "0.1.0"
+version = "0.1.0.1"
 authors = ["Dudochkin Victor <dudochkin.victor@gmail.com>", "Daniel Yule <yule@cs.dal.ca>"]
 license = "MIT"
-homepage = "https://github.com/ohyo-io/wampire"
+readme = "README.md"
 repository = "https://github.com/ohyo-io/wampire"
-description = "A WAMP client and router implenting the basic WAMP profile"
+documentation = "https://github.com/ohyo-io/wampire"
+homepage = "https://github.com/ohyo-io/wampire"
+description = "A WAMPv2 client and router implenting the basic WAMP profile"
 keywords = ["rpc", "pubsub", "wamp", "wamp2"]
+categories = ["network-programming", "web-programming", "web-programming::websocket"]
 
 [lib]
 name = "wampire"
 path = "src/lib.rs"
-
 
 [dependencies]
 serde = "1.0"

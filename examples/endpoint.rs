@@ -1,11 +1,11 @@
-extern crate wamp;
+extern crate wampire;
 extern crate eventual;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 
-use wamp::client::Connection;
-use wamp::{URI, Value, Dict, List, CallResult, ArgList};
+use wampire::client::Connection;
+use wampire::{URI, Value, Dict, List, CallResult, ArgList};
 use std::io;
 use eventual::Async;
 
