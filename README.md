@@ -34,10 +34,8 @@ To include in your project, place the following in your `Cargo.toml`
 [dependencies]
 wampire = "0.1"
 ```
-
-wampire uses [serde-rs](https://github.com/serde-rs/serde), which requires Rust 1.15 or greater.
-
-Initial forked from https://github.com/dyule/wamp-rs
+Wampire uses [serde-rs](https://github.com/serde-rs/serde), which requires Rust 1.15 or greater. 
+Project initially forked from https://github.com/dyule/wamp-rs.
 
 ## Router
 To start router in development mode use
