@@ -9,8 +9,11 @@ The wampire project is written in [Rust](https://www.rust-lang.org/) and designe
 The wampire router provides extended functionality.  The router and client interoperate with other WAMP implementations.
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/logo_wampire.png" alt="Wampire logo" width="256" />
+    <img src="https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/wampire_webrtc.png" alt="Wampire logo" width="405" />
 </p>
+
+Check the [examples/webrtc-simple](examples/webrtc-simple) folder 
+for nodejs based example using wampire as signaling server for WebRTC cennection. 
 
 ## Full Documentation
 
@@ -75,15 +78,6 @@ To enable as system service:
 ``` bash
 systemctl enable wampire
 ```
-## Wampire plus WebRTC
-
-<p align="center">
-    <img src="https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/wampire_webrtc.png" alt="Wampire logo" width="405" />
-</p>
-
-Check the [examples/webrtc-simple](examples/webrtc-simple) folder 
-for nodejs based example using wampire as signaling server for WebRTC cennection. 
-
 ## Examples
 Please see the [examples](examples) directory.
 For instructions on how to check the examples
