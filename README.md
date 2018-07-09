@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/ohyo-io/wampire.svg)](https://travis-ci.org/ohyo-io/wampire)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/Y2k3GAW)
 
 **Wampire** is a [Web Application Messaging Protcol v2](http://wamp-proto.org/) v2 router library, client library, and a router service, 
 that implements most of the features defined in the advanced profile. The wampire project is written 
@@ -14,6 +15,14 @@ provides extended functionality.  The router and client interaction with other W
 
 Check the [examples/webrtc-simple](examples/webrtc-simple) folder 
 for nodejs based example using wampire as signaling server for WebRTC connection. 
+
+##Supporting Wampire
+
+Wampire is an MIT-licensed open source project. It's an independent project with its ongoing development made possible 
+entirely thanks to the support by these awesome [backers](https://github.com/ohyo-io/wampire/blob/dev/BACKERS.md). If 
+you'd like to join them, please consider:
+
+- [Become a backer or sponsor on Patreon](https://www.patreon.com/dudochkin).
 
 ## Full Documentation
 
