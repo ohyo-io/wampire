@@ -6,14 +6,14 @@
 **Wampire** is a [Web Application Messaging Protcol v2](http://wamp-proto.org/) v2 router library, client library, and a router service, 
 that implements most of the features defined in the advanced profile. The wampire project is written 
 in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O. The wampire router 
-provides extended functionality.  The router and client interoperate with other WAMP implementations.
+provides extended functionality.  The router and client interaction with other WAMP implementations.
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/wampire_webrtc.png" alt="Wampire logo" width="405" />
 </p>
 
 Check the [examples/webrtc-simple](examples/webrtc-simple) folder 
-for nodejs based example using wampire as signaling server for WebRTC cennection. 
+for nodejs based example using wampire as signaling server for WebRTC connection. 
 
 ## Full Documentation
 
@@ -141,7 +141,7 @@ RUST_LOG=info cargo run --example pubsubclient
 
 ## Extended Functionality
 
-Nexus provides [extended functionality](https://github.com/ohyo-io/wampire/wiki/Extended-Functionality) 
+Wampire provides [extended functionality](https://github.com/ohyo-io/wampire/wiki/Extended-Functionality) 
 around subscriber black/white listing and in the information available via the session meta API.  
 This enhances the ability of clients to make desisions about message recipients.
 
