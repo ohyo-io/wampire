@@ -1,6 +1,6 @@
 [package]
 name = "wampire"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Dudochkin Victor <dudochkin.victor@gmail.com>", "Daniel Yule <yule@cs.dal.ca>"]
 license = "MIT"
 readme = "README.md"
