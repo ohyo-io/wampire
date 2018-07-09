@@ -45,7 +45,22 @@ location /ws/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 ```
-    
+### Systemd
+Build router:
+1. Clone repo using `git clone https://github.com/ohyo-io/wampire.git`
+2. `cd wampire && cargo build`
+3. Copy `wampire` from `target` folder to `/usr/local/bin`
+4. Copy `wampire.service` from `dist` to `/usr/lib/systemd/system` or `/lib/systemd/system` (depend on your system).
+
+To start a service:
+``` bash
+systemctl start wampire
+```
+To enable as system service:
+``` bash
+systemctl enable wampire
+```
+
 ## examples
 Please see the [examples](examples) directory.
 For instructions on how to check the examples
