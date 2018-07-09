@@ -1,12 +1,27 @@
-# wampire
-Rust implementation of a WAMP [Web Application Messaging Protcol](http://wamp-proto.org/). client and router
+# Wampire
+
+**Wampire** is a [Web Application Messaging Protcol v2](http://wamp-proto.org/) v2 router library, client library, and a router service, 
+that implements most of the features defined in the advanced profile.  
+The wampire project is written in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O.  
+The wampire router provides extended functionality.  The router and client interoperate with other WAMP implementations.
+
+[![Build Status](https://travis-ci.org/ohyo-io/wampire.svg)](https://travis-ci.org/ohyo-io/wampire)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/logo_wampire.png" alt="Wampire logo" width="256" />
 </p>
 
+## Full Documentation
+
+See the [**wampire project Wiki**](https://github.com/ohyo-io/wampire/wiki) for full documentation, examples, and operational details.
 
 At present the entire Basic Profile is supported, as well as pattern based subscriptions and registrations from the Advanced Profile.
+
+You may be looking for:
+
+- [API documentation](https://docs.rs/wampire/)
+- [Release notes](https://github.com/ohyo-io/wampire/releases)
 
 There is currently no support for secure connections.
 
@@ -21,7 +36,7 @@ wampire uses [serde-rs](https://github.com/serde-rs/serde), which requires Rust 
 
 Initial forked from https://github.com/dyule/wamp-rs
 
-## router
+## Router
 To start router in development mode use
 ```bash
 RUST_LOG=info cargo run wampire
@@ -61,7 +76,7 @@ To enable as system service:
 systemctl enable wampire
 ```
 
-## examples
+## Examples
 Please see the [examples](examples) directory.
 For instructions on how to check the examples
 
@@ -74,6 +89,62 @@ RUST_LOG=info cargo run --example endpoint
 ```bash
 RUST_LOG=info cargo run --example pubsubclient
 ```
+
+## Advanced Profile Feature Support
+
+### RPC Features
+
+| Feature | Supported |
+| ------- | --------- |
+| progressive_call_results | Yes |
+| progressive_calls | No |
+| call_timeout | Yes |
+| call_canceling | Yes |
+| caller_identification | Yes |
+| call_trustlevels | No |
+| registration_meta_api | Yes
+| pattern_based_registration | Yes |
+| shared_registration | Yes |
+| sharded_registration | No |
+| registration_revocation | No |
+| procedure_reflection | No |
+
+### PubSub Features
+
+| Feature | Supported |
+| ------- | --------- |
+| subscriber_blackwhite_listing | Yes |
+| publisher_exclusion | Yes |
+| publisher_identification | Yes |
+| publication_trustlevels | No|
+| subscription_meta_api | Yes |
+| pattern_based_subscription | Yes |
+| sharded_subscription | No |
+| event_history | No |
+| topic_reflection | No |
+| testament_meta_api | Yes |
+
+### Other Advanced Features
+
+| Feature | Supported |
+| ------- | --------- |
+| challenge-response authentication | Yes |
+| cookie authentication | Yes |
+| ticket authentication | Yes |
+| rawsocket transport | Yes |
+| batched WS transport | No |
+| longpoll transport | No |
+| session meta api | Yes |
+| TLS for websockets | Yes |
+| TLS for rawsockets | Yes |
+| websocket compression | Yes |
+
+## Extended Functionality
+
+Nexus provides [extended functionality](https://github.com/ohyo-io/wampire/wiki/Extended-Functionality) 
+around subscriber black/white listing and in the information available via the session meta API.  
+This enhances the ability of clients to make desisions about message recipients.
+
 ## Legal
 
 ### License
