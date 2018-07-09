@@ -1,0 +1,215 @@
+<html>
+
+<head>
+    <title>Simple DataChannel</title>
+    <link rel="stylesheet" media="screen" href="stylesheets/main.css">
+    <script src="autobahn.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+</head>
+
+<body>
+    <button id="ws-connect">Connect to WebSocket</button>
+
+    <form id="idform" action="">
+        <input type="text" id="user" placeholder="e.g. Alice">
+        <button id="setid">Set your name</button>
+    </form>
+    <form id="dcform" action="">
+        <input type="text" id="connectTo" placeholder="e.g. Bob">
+        <button id="dc-connect">Connect to</button>
+    </form>
+    <form id="sendform" action="">
+        <input type="text" id="message">
+        <button id="send">Send Text over DataChannel</button>
+    </form>
+</body>
+
+<script>
+
+    $("#idform").hide();
+    $("#dcform").hide();
+    $("#sendform").hide();
+
+    $("#idform").submit(setMyId);
+    $("#dcform").submit(connectTo);
+    $("#sendform").submit(sendDirect);
+
+    $("#setid").click(setMyId);
+    $("#dc-connect").click(connectTo);
+    $("#send").click(sendDirect);
+
+    // var ws = null;
+    var wamp = null;
+    var user = "";
+    var user2 = "";
+    var config = { "iceServers": [{ "url": "stun:stun.l.google.com:19302" }] };
+    var connection = {};
+
+    var peerConnection;
+    var dataChannel;
+    var sendNegotiation = null;
+
+
+    $("#ws-connect").click(function () {
+
+        var wamp = new autobahn.Connection({ url: 'ws://127.0.0.1:8090/ws/', realm: 'turnpike.examples' });
+
+        wamp.onopen = function (session) {
+
+            console.log("Websocket opened");
+            $("#idform").show();
+
+            session.subscribe('room', (args) => {
+                var json = args[0];
+                console.log("Event:", json);
+
+                if (json.hasOwnProperty("type")) {
+                    if (json.type == "offer") {
+                        // user2 = "opponent";
+                        processOffer(json);
+                    } else if (json.type == "answer") {
+                        processAnswer(json);
+                    }
+                } else if (json.hasOwnProperty("candidate")) {
+                    processIce(json);
+                }
+                // else if(json.type == "id"){
+                //    userId = json.data;
+                // } else if(json.type=="newUser"){
+                //     if(userId!=null && json.data!=userId){
+
+                //     }
+                // }
+            });
+
+            sendNegotiation = function (type, sdp) {
+                session.publish('room', [sdp]);
+            }
+
+            // session.publish('room', ['Hello, world!']);
+
+            // function add2(args) {
+            //     return args[0] + args[1];
+            // }
+
+            // session.register('com.myapp.add2', add2);
+
+            // session.call('com.myapp.add2', [2, 3]).then(
+            //     function (res) {
+            //         console.log("Result:", res);
+            //     }
+            // );
+        };
+
+        wamp.open();
+    });
+
+    function setMyId(e) {
+        e.preventDefault();
+        user = $("#user").val();
+        $("#dcform").show();
+        return false;
+    }
+
+    function connectTo(e) {
+        e.preventDefault();
+        user2 = $("#connectTo").val();
+        openDataChannel();
+
+        var sdpConstraints = { offerToReceiveAudio: true, offerToReceiveVideo: false }
+        peerConnection.createOffer(sdpConstraints).then(function (sdp) {
+            peerConnection.setLocalDescription(sdp);
+            sendNegotiation("offer", sdp);
+            console.log("------ SEND OFFER ------");
+        }, function (err) {
+            console.log(err)
+        });
+
+    }
+
+    function sendDirect(e) {
+        e.preventDefault();
+        dataChannel.send($("#message").val());
+        $('body').append('Me: <div class="message">' + $("#message").val() + '</div>');
+        console.log("Sending over datachannel: " + $("#message").val());
+        $("#message").val('');
+    }
+
+    function getURLParameter(name) {
+        return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [, ""])[1].replace(/\+/g, '%20')) || null
+    }
+
+
+    function openDataChannel() {
+        peerConnection = new webkitRTCPeerConnection(config, connection);
+        peerConnection.onicecandidate = function (e) {
+            if (!peerConnection || !e || !e.candidate) return;
+            var candidate = event.candidate;
+            sendNegotiation("candidate", candidate);
+        }
+
+        dataChannel = peerConnection.createDataChannel("datachannel", { reliable: false });
+
+        dataChannel.onopen = function () {
+            console.log("------ DATACHANNEL OPENED ------")
+            $("#sendform").show();
+        };
+        dataChannel.onclose = function () { console.log("------ DC closed! ------") };
+        dataChannel.onerror = function () { console.log("DC ERROR!!!") };
+
+        peerConnection.ondatachannel = function (ev) {
+            console.log('peerConnection.ondatachannel event fired.');
+            ev.channel.onopen = function () {
+                console.log('Data channel is open and ready to be used.');
+            };
+            ev.channel.onmessage = function (e) {
+                console.log("DC from [" + user2 + "]:" + e.data);
+                $('body').append(user2 + ': <div class="message from">' + e.data + '</div>')
+            }
+        };
+
+        return peerConnection
+    }
+
+    function processOffer(offer) {
+        var peerConnection = openDataChannel();
+        peerConnection.setRemoteDescription(new RTCSessionDescription(offer)).catch(e => {
+            console.log(e)
+        });
+
+        var sdpConstraints = {
+            'mandatory':
+            {
+                'OfferToReceiveAudio': false,
+                'OfferToReceiveVideo': false
+            }
+        };
+
+        peerConnection.createAnswer(sdpConstraints).then(function (sdp) {
+            return peerConnection.setLocalDescription(sdp).then(function () {
+                sendNegotiation("answer", sdp);
+                console.log("------ SEND ANSWER ------");
+            })
+        }, function (err) {
+            console.log(err)
+        });
+        console.log("------ PROCESSED OFFER ------");
+    };
+
+    function processAnswer(answer) {
+
+        peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log("------ PROCESSED ANSWER ------");
+        return true;
+    };
+
+    function processIce(iceCandidate) {
+        peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate)).catch(e => {
+            debugger
+            console.log(e)
+        })
+    }
+
+</script>
+
+</html>
