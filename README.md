@@ -18,3 +18,8 @@ wampire uses [serde-rs](https://github.com/serde-rs/serde), which requires Rust 
 
 Initial forked from https://github.com/dyule/wamp-rs
 
+## router
+
+```bash
+RUST_LOG=info cargo run --example router
+```
