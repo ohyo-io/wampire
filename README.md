@@ -74,3 +74,8 @@ RUST_LOG=info cargo run --example endpoint
 ```bash
 RUST_LOG=info cargo run --example pubsubclient
 ```
+## Legal
+
+### License
+
+This work is licensed under the MIT license. See [LICENSE](./LICENSE) for details.
