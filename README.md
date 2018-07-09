@@ -4,9 +4,9 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Wampire** is a [Web Application Messaging Protcol v2](http://wamp-proto.org/) v2 router library, client library, and a router service, 
-that implements most of the features defined in the advanced profile.  
-The wampire project is written in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O.  
-The wampire router provides extended functionality.  The router and client interoperate with other WAMP implementations.
+that implements most of the features defined in the advanced profile. The wampire project is written 
+in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O. The wampire router 
+provides extended functionality.  The router and client interoperate with other WAMP implementations.
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/wampire_webrtc.png" alt="Wampire logo" width="405" />
