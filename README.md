@@ -22,7 +22,8 @@ Wampire is an MIT-licensed open source project. It's an independent project with
 entirely thanks to the support by these awesome [backers](./BACKERS.md). If 
 you'd like to join them, please consider:
 
-[![Become a patron](https://c5.patreon.com/external/logo/become_a_patron_button.png)](https://www.patreon.com/dudochkin).
+[![Become a patron](https://c5.patreon.com/external/logo/become_a_patron_button.png)](https://www.patreon.com/dudochkin)
+
 [![ko-fi](https://www.ko-fi.com/img/donate_sm.png)](https://ko-fi.com/Y8Y3E0YQ)
 ## Full Documentation
 
