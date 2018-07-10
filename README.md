@@ -16,13 +16,13 @@ provides extended functionality.  The router and client interaction with other W
 Check the [examples/webrtc-simple](examples/webrtc-simple) folder 
 for nodejs based example using wampire as signaling server for WebRTC connection. 
 
-##Supporting Wampire
+## Supporting Wampire
 
 Wampire is an MIT-licensed open source project. It's an independent project with its ongoing development made possible 
-entirely thanks to the support by these awesome [backers](https://github.com/ohyo-io/wampire/blob/dev/BACKERS.md). If 
+entirely thanks to the support by these awesome [backers](./BACKERS.md). If 
 you'd like to join them, please consider:
 
-- [Become a backer or sponsor on Patreon](https://www.patreon.com/dudochkin).
+- [![Become a patron](https://c5.patreon.com/external/logo/become_a_patron_button.png)](https://www.patreon.com/dudochkin).
 
 ## Full Documentation
 
