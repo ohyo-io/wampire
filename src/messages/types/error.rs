@@ -1,7 +1,7 @@
-use URI;
-use std::fmt;
+use super::{Dict, List};
 use serde;
-use super::{List, Dict};
+use std::fmt;
+use URI;
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 pub enum Reason {
@@ -24,14 +24,14 @@ pub enum Reason {
     OptionDisallowedDiscloseMe,
     NetworkFailure,
     NormalClose,
-    CustomReason(URI)
+    CustomReason(URI),
 }
 
 #[derive(Debug)]
 pub struct CallError {
     reason: Reason,
     args: Option<List>,
-    kwargs: Option<Dict>
+    kwargs: Option<Dict>,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug)]
@@ -51,7 +51,7 @@ impl CallError {
         CallError {
             reason: reason,
             args: args,
-            kwargs: kwargs
+            kwargs: kwargs,
         }
     }
 
@@ -101,7 +101,7 @@ impl Reason {
             Reason::OptionDisallowedDiscloseMe => "wamp.error.option-disallowed.disclose_me",
             Reason::NetworkFailure => "wamp.error.network_failure",
             Reason::NormalClose => "wamp.close.normal",
-            Reason::CustomReason(ref reason) => &reason.uri
+            Reason::CustomReason(ref reason) => &reason.uri,
         }
     }
 }
@@ -118,21 +118,23 @@ impl fmt::Display for Reason {
 
 impl serde::Serialize for Reason {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: serde::Serializer,
+    where
+        S: serde::Serializer,
     {
         serializer.serialize_str(self.get_string())
     }
 }
 
-impl <'de> serde::Deserialize<'de> for Reason {
+impl<'de> serde::Deserialize<'de> for Reason {
     fn deserialize<D>(deserializer: D) -> Result<Reason, D::Error>
-        where D: serde::Deserializer<'de>,
+    where
+        D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_str(ReasonVisitor)
     }
 }
 
-impl <'de> serde::de::Visitor<'de> for ReasonVisitor {
+impl<'de> serde::de::Visitor<'de> for ReasonVisitor {
     type Value = Reason;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -141,34 +143,33 @@ impl <'de> serde::de::Visitor<'de> for ReasonVisitor {
 
     #[inline]
     fn visit_str<E>(self, value: &str) -> Result<Reason, E>
-        where E: serde::de::Error,
+    where
+        E: serde::de::Error,
     {
         match value {
-             "wamp.error.invalid_uri" => Ok(Reason::InvalidURI),
-             "wamp.error.no_such_procedure" => Ok(Reason::NoSuchProcedure),
-             "wamp.error.procedure_already_exists" => Ok(Reason::ProcedureAlreadyExists),
-             "wamp.error.no_such_registration" => Ok(Reason::NoSuchRegistration),
-             "wamp.error.no_such_subscription" => Ok(Reason::NoSuchSubscription),
-             "wamp.error.invalid_argument" => Ok(Reason::InvalidArgument),
-             "wamp.error.system_shutdown" => Ok(Reason::SystemShutdown),
-             "wamp.error.close_realm" => Ok(Reason::CloseRealm),
-             "wamp.error.goodbye_and_out" => Ok(Reason::GoodbyeAndOut),
-             "wamp.error.not_authorized" => Ok(Reason::NotAuthorized),
-             "wamp.error.authorization_failed" => Ok(Reason::AuthorizationFailed),
-             "wamp.error.no_such_realm" => Ok(Reason::NoSuchRealm),
-             "wamp.error.no_such_role" => Ok(Reason::NoSuchRole),
-             "wamp.error.cancelled" => Ok(Reason::Cancelled),
-             "wamp.error.option_not_allowed" => Ok(Reason::OptionNotAllowed),
-             "wamp.error.no_eligible_callee" => Ok(Reason::NoEligibleCallee),
-             "wamp.error.option-disallowed.disclose_me" => Ok(Reason::OptionDisallowedDiscloseMe),
-             "wamp.error.network_failure" => Ok(Reason::NetworkFailure),
-             "wamp.close.normal" => Ok(Reason::NormalClose),
-             x => Ok(Reason::CustomReason(URI::new(x)))
+            "wamp.error.invalid_uri" => Ok(Reason::InvalidURI),
+            "wamp.error.no_such_procedure" => Ok(Reason::NoSuchProcedure),
+            "wamp.error.procedure_already_exists" => Ok(Reason::ProcedureAlreadyExists),
+            "wamp.error.no_such_registration" => Ok(Reason::NoSuchRegistration),
+            "wamp.error.no_such_subscription" => Ok(Reason::NoSuchSubscription),
+            "wamp.error.invalid_argument" => Ok(Reason::InvalidArgument),
+            "wamp.error.system_shutdown" => Ok(Reason::SystemShutdown),
+            "wamp.error.close_realm" => Ok(Reason::CloseRealm),
+            "wamp.error.goodbye_and_out" => Ok(Reason::GoodbyeAndOut),
+            "wamp.error.not_authorized" => Ok(Reason::NotAuthorized),
+            "wamp.error.authorization_failed" => Ok(Reason::AuthorizationFailed),
+            "wamp.error.no_such_realm" => Ok(Reason::NoSuchRealm),
+            "wamp.error.no_such_role" => Ok(Reason::NoSuchRole),
+            "wamp.error.cancelled" => Ok(Reason::Cancelled),
+            "wamp.error.option_not_allowed" => Ok(Reason::OptionNotAllowed),
+            "wamp.error.no_eligible_callee" => Ok(Reason::NoEligibleCallee),
+            "wamp.error.option-disallowed.disclose_me" => Ok(Reason::OptionDisallowedDiscloseMe),
+            "wamp.error.network_failure" => Ok(Reason::NetworkFailure),
+            "wamp.close.normal" => Ok(Reason::NormalClose),
+            x => Ok(Reason::CustomReason(URI::new(x))),
         }
     }
-
 }
-
 
 /*-------------------------
          ErrorType
@@ -176,30 +177,32 @@ impl <'de> serde::de::Visitor<'de> for ReasonVisitor {
 
 impl serde::Serialize for ErrorType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: serde::Serializer,
+    where
+        S: serde::Serializer,
     {
         let ser_int = match *self {
-             ErrorType::Subscribe => 32,
-             ErrorType::Unsubscribe => 34,
-             ErrorType::Publish => 16,
-             ErrorType::Register => 64,
-             ErrorType::Unregister => 66,
-             ErrorType::Invocation => 68,
-             ErrorType::Call => 48,
+            ErrorType::Subscribe => 32,
+            ErrorType::Unsubscribe => 34,
+            ErrorType::Publish => 16,
+            ErrorType::Register => 64,
+            ErrorType::Unregister => 66,
+            ErrorType::Invocation => 68,
+            ErrorType::Call => 48,
         };
         serializer.serialize_u64(ser_int)
     }
 }
 
-impl <'de> serde::Deserialize<'de> for ErrorType {
+impl<'de> serde::Deserialize<'de> for ErrorType {
     fn deserialize<D>(deserializer: D) -> Result<ErrorType, D::Error>
-        where D: serde::Deserializer<'de>,
+    where
+        D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_u64(ErrorTypeVisitor)
     }
 }
 
-impl <'de> serde::de::Visitor<'de> for ErrorTypeVisitor {
+impl<'de> serde::de::Visitor<'de> for ErrorTypeVisitor {
     type Value = ErrorType;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -208,7 +211,8 @@ impl <'de> serde::de::Visitor<'de> for ErrorTypeVisitor {
 
     #[inline]
     fn visit_u64<E>(self, value: u64) -> Result<ErrorType, E>
-        where E: serde::de::Error,
+    where
+        E: serde::de::Error,
     {
         match value {
             32 => Ok(ErrorType::Subscribe),
@@ -218,8 +222,10 @@ impl <'de> serde::de::Visitor<'de> for ErrorTypeVisitor {
             66 => Ok(ErrorType::Unregister),
             68 => Ok(ErrorType::Invocation),
             48 => Ok(ErrorType::Call),
-            x => Err(serde::de::Error::custom(format!("Invalid message error type: {}", x)))
+            x => Err(serde::de::Error::custom(format!(
+                "Invalid message error type: {}",
+                x
+            ))),
         }
     }
-
 }

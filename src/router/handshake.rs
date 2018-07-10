@@ -1,11 +1,12 @@
-use std::sync::Arc;
 use super::{ConnectionHandler, ConnectionState, WAMP_JSON, WAMP_MSGPACK};
+use std::sync::Arc;
 
 use router::messaging::send_message;
-use ws::{Error as WSError, ErrorKind as WSErrorKind, Result as WSResult, Request, Response, CloseCode};
+use ws::{CloseCode, Error as WSError, ErrorKind as WSErrorKind, Request, Response,
+         Result as WSResult};
 
-use messages::{Message, URI, HelloDetails, WelcomeDetails, RouterRoles, ErrorDetails, Reason};
-use ::{WampResult, Error, ErrorKind};
+use messages::{ErrorDetails, HelloDetails, Message, Reason, RouterRoles, WelcomeDetails, URI};
+use {Error, ErrorKind, WampResult};
 
 impl ConnectionHandler {
     pub fn handle_hello(&mut self, realm: URI, _details: HelloDetails) -> WampResult<()> {
@@ -17,36 +18,47 @@ impl ConnectionHandler {
         };
 
         try!(self.set_realm(realm.uri));
-        send_message(&self.info, &Message::Welcome(id, WelcomeDetails::new(RouterRoles::new())))
+        send_message(
+            &self.info,
+            &Message::Welcome(id, WelcomeDetails::new(RouterRoles::new())),
+        )
     }
 
     pub fn handle_goodbye(&mut self, _details: ErrorDetails, reason: Reason) -> WampResult<()> {
         let state = self.info.lock().unwrap().state.clone();
-        match  state {
+        match state {
             ConnectionState::Initializing => {
                 // TODO check specification for how this ought to work.
-                Err(Error::new(ErrorKind::InvalidState("Received a goodbye message before handshake complete")))
-            },
+                Err(Error::new(ErrorKind::InvalidState(
+                    "Received a goodbye message before handshake complete",
+                )))
+            }
             ConnectionState::Connected => {
                 info!("Received goodbye message with reason: {:?}", reason);
                 self.remove();
-                send_message(&self.info, &Message::Goodbye(ErrorDetails::new(), Reason::GoodbyeAndOut)).ok();
+                send_message(
+                    &self.info,
+                    &Message::Goodbye(ErrorDetails::new(), Reason::GoodbyeAndOut),
+                ).ok();
                 let mut info = self.info.lock().unwrap();
                 info.state = ConnectionState::Disconnected;
                 match info.sender.close(CloseCode::Normal) {
                     Err(e) => Err(Error::new(ErrorKind::WSError(e))),
-                    _ => Ok(())
+                    _ => Ok(()),
                 }
-            },
+            }
             ConnectionState::ShuttingDown => {
-                info!("Received goodbye message in response to our goodbye message with reason: {:?}", reason);
+                info!(
+                    "Received goodbye message in response to our goodbye message with reason: {:?}",
+                    reason
+                );
                 let mut info = self.info.lock().unwrap();
                 info.state = ConnectionState::Disconnected;
                 match info.sender.close(CloseCode::Normal) {
                     Err(e) => Err(Error::new(ErrorKind::WSError(e))),
-                    _ => Ok(())
+                    _ => Ok(()),
                 }
-            },
+            }
             ConnectionState::Disconnected => {
                 warn!("Received goodbye message after closing connection");
                 Ok(())
@@ -54,16 +66,19 @@ impl ConnectionHandler {
         }
     }
 
-
     fn set_realm(&mut self, realm: String) -> WampResult<()> {
         debug!("Setting realm to {}", realm);
-        if let Some(realm) =  self.router.realms.lock().unwrap().get(&realm) {
+        if let Some(realm) = self.router.realms.lock().unwrap().get(&realm) {
             {
-            realm.lock().unwrap().connections.push(Arc::clone(&self.info));
-        }
+                realm
+                    .lock()
+                    .unwrap()
+                    .connections
+                    .push(Arc::clone(&self.info));
+            }
             self.realm = Some(Arc::clone(realm));
         } else {
-            return Err(Error::new(ErrorKind::HandshakeError(Reason::NoSuchRealm)))
+            return Err(Error::new(ErrorKind::HandshakeError(Reason::NoSuchRealm)));
         }
         Ok(())
     }
@@ -76,11 +91,15 @@ impl ConnectionHandler {
                 response.set_protocol(protocol);
                 let mut info = self.info.lock().unwrap();
                 info.protocol = protocol.to_string();
-                return Ok(())
+                return Ok(());
             }
         }
-        Err(WSError::new(WSErrorKind::Protocol, format!("Neither {} nor {} were selected as Websocket sub-protocols", WAMP_JSON, WAMP_MSGPACK)))
+        Err(WSError::new(
+            WSErrorKind::Protocol,
+            format!(
+                "Neither {} nor {} were selected as Websocket sub-protocols",
+                WAMP_JSON, WAMP_MSGPACK
+            ),
+        ))
     }
-
-
 }

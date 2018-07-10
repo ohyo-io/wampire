@@ -7,7 +7,8 @@
 **Wampire** is a [Web Application Messaging Protcol v2](http://wamp-proto.org/) v2 router library, client library, and a router service, 
 that implements most of the features defined in the advanced profile. The wampire project is written 
 in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O. The wampire router 
-provides extended functionality.  The router and client interaction with other WAMP implementations.
+provides extended functionality.  The router and client interaction with other WAMP implementations. 
+Project initially forked from [wamp-rs v0.1.0](https://github.com/dyule/wamp-rs).
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/wampire_webrtc.png" alt="Wampire logo" width="405" />
@@ -43,8 +44,7 @@ To include in your project, place the following in your `Cargo.toml`
 [dependencies]
 wampire = "0.1"
 ```
-Wampire uses [serde-rs](https://github.com/serde-rs/serde), which requires Rust 1.15 or greater. 
-Project initially forked from https://github.com/dyule/wamp-rs.
+Wampire uses [serde-rs](https://github.com/serde-rs/serde), which requires Rust 1.15 or greater.
 
 ## Router
 To start router in development mode use

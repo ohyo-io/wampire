@@ -1,14 +1,13 @@
-extern crate wampire;
 extern crate eventual;
-use wampire::client::{Connection, Client};
-use wampire::{URI, Value, ArgList};
-use std::io;
+extern crate wampire;
 use eventual::Async;
+use std::io;
+use wampire::client::{Client, Connection};
+use wampire::{ArgList, Value, URI};
 
 #[macro_use]
 extern crate log;
 extern crate env_logger;
-
 
 enum Command {
     Add,
@@ -16,7 +15,7 @@ enum Command {
     Help,
     Quit,
     NoOp,
-    Invalid(String)
+    Invalid(String),
 }
 
 fn print_prompt() {
@@ -33,7 +32,7 @@ fn process_input(input: &str) -> (Command, Vec<String>) {
     let mut i_iter = input.splitn(2, ' ');
     let command = match i_iter.next() {
         Some(command) => command.trim().to_lowercase(),
-        None          => return (Command::NoOp, Vec::new())
+        None => return (Command::NoOp, Vec::new()),
     };
     let command = match command.as_str() {
         "add" => Command::Add,
@@ -41,11 +40,14 @@ fn process_input(input: &str) -> (Command, Vec<String>) {
         "help" => Command::Help,
         "quit" => Command::Quit,
         "" => Command::NoOp,
-        x => Command::Invalid(x.to_string())
+        x => Command::Invalid(x.to_string()),
     };
     let args = match i_iter.next() {
-        Some(args_string) => args_string.split(',').map(|s| s.trim().to_string()).collect(),
-        None              => Vec::new()
+        Some(args_string) => args_string
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect(),
+        None => Vec::new(),
     };
     (command, args)
 }
@@ -62,43 +64,53 @@ fn add(client: &mut Client, args: &[String]) {
         Ok(i) => i,
         Err(_) => {
             println!("Please enter an integer (got {})", args[0]);
-            return
+            return;
         }
     };
     let b = match str::parse::<i64>(&args[1]) {
         Ok(i) => i,
         Err(_) => {
             println!("Please enter an integer (got {})", args[0]);
-            return
+            return;
         }
     };
-    match client.call(URI::new("ca.test.add"), Some(vec![Value::Integer(a), Value::Integer(b)]), None).unwrap().await() {
+    match client
+        .call(
+            URI::new("ca.test.add"),
+            Some(vec![Value::Integer(a), Value::Integer(b)]),
+            None,
+        )
+        .unwrap()
+        .await()
+    {
         Ok((args, _)) => {
             println!("Result: {}", args.get_int(0).unwrap().unwrap());
-        } Err(e) => {
-            match e.take() {
-                Some(e) => {
-                    println!("Error: {:?}", e);
-                } None => {
-                    println!("Aborted");
-                }
-            }
         }
+        Err(e) => match e.take() {
+            Some(e) => {
+                println!("Error: {:?}", e);
+            }
+            None => {
+                println!("Aborted");
+            }
+        },
     }
 }
 
 fn echo(client: &mut Client, args: Vec<String>) {
-    let args = args.into_iter().map(|arg| {Value::String(arg)}).collect();
-    let result = client.call(URI::new("ca.test.echo"), Some(args), None).unwrap().await();
+    let args = args.into_iter().map(|arg| Value::String(arg)).collect();
+    let result = client
+        .call(URI::new("ca.test.echo"), Some(args), None)
+        .unwrap()
+        .await();
     println!("Result: {:?}", result);
 }
 
-
 fn help() {
-    println!("This client expects the 'endpoint' and 'router' examples to also be running", );
+    println!("This client expects the 'endpoint' and 'router' examples to also be running",);
     println!("The following commands are supported:");
     println!("  add <a>, <b>");
-    println!("     Adds the two numbers given by <a> and <b>", );
+    println!("     Adds the two numbers given by <a> and <b>",);
     println!("  echo <args>*");
     println!("     Echoes any arguments passed back");
     println!("  quit");
@@ -115,18 +127,16 @@ fn event_loop(mut client: Client) {
             Command::Echo => echo(&mut client, args),
             Command::Help => help(),
             Command::Quit => break,
-            Command::NoOp => {},
-            Command::Invalid(bad_command) => print!("Invalid command: {}", bad_command)
+            Command::NoOp => {}
+            Command::Invalid(bad_command) => print!("Invalid command: {}", bad_command),
         }
     }
     client.shutdown().unwrap().await().unwrap();
-
 }
 
-
 fn main() {
-    env_logger::init().unwrap();
-    let connection = Connection::new("ws://127.0.0.1:8090/ws", "realm1");
+    env_logger::init();
+    let connection = Connection::new("ws://127.0.0.1:8090/ws", "wampire_realm");
     info!("Connecting");
     let client = connection.connect().unwrap();
 

@@ -14,7 +14,7 @@ var wsList = [];
 
 var wamp = new autobahn.Connection({
   url: `ws://${IP_ADDRESS}:8090/ws/`,
-  realm: "turnpike.examples"
+  realm: "wampire_realm"
 });
 
 wamp.onopen = function(session) {
@@ -28,14 +28,15 @@ wamp.onopen = function(session) {
 
   // 3) register a procedure for remoting
   function add2(args) {
+    console.log("ADD INVOCATION");
     return args[0] + args[1];
   }
   session.register("com.myapp.add2", add2);
 
   // 4) call a remote procedure
-  session.call("com.myapp.add2", [2, 3]).then(function(res) {
-    console.log("Result:", res);
-  });
+  // session.call("com.myapp.add2", [2, 3]).then(function(res) {
+  //   console.log("Result:", res);
+  // });
 };
 
 wamp.open();

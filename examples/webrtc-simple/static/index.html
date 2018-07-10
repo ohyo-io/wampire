@@ -52,7 +52,7 @@
 
     $("#ws-connect").click(function () {
 
-        var wamp = new autobahn.Connection({ url: 'ws://127.0.0.1:8090/ws/', realm: 'turnpike.examples' });
+        var wamp = new autobahn.Connection({ url: 'ws://127.0.0.1:8090/ws/', realm: 'wampire_realm' });
 
         wamp.onopen = function (session) {
 
@@ -91,9 +91,9 @@
             // function add2(args) {
             //     return args[0] + args[1];
             // }
-
+            //
             // session.register('com.myapp.add2', add2);
-
+            //
             // session.call('com.myapp.add2', [2, 3]).then(
             //     function (res) {
             //         console.log("Result:", res);
