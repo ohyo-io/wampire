@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/Y2k3GAW)
 
-**Wampire** is a [Web Application Messaging Protcol v2](http://wamp-proto.org/) v2 router library, client library, and a router service, 
+**Wampire** is a [Web Application Messaging Protcol v2](http://wamp-proto.org/) router library, client library, and a router service, 
 that implements most of the features defined in the advanced profile. The wampire project is written 
 in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O. The wampire router 
 provides extended functionality.  The router and client interaction with other WAMP implementations. 
