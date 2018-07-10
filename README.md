@@ -1,6 +1,7 @@
 # Wampire
 
 [![Build Status](https://travis-ci.org/ohyo-io/wampire.svg)](https://travis-ci.org/ohyo-io/wampire)
+[![Crates](https://img.shields.io/badge/crates.io-v0.1.2-orange.svg)](https://crates.io/crates/wampire)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/Y2k3GAW)
 
