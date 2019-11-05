@@ -1,7 +1,8 @@
+use std::io::Write;
+
 use rmp::encode::{write_map_len, write_str, ValueWriteError};
 use rmp::Marker;
 use rmp_serde::encode::VariantWriter;
-use std::io::Write;
 
 pub struct StructMapWriter;
 

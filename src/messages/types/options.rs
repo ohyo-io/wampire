@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use super::{is_not, ClientRoles, InvocationPolicy, MatchingPolicy, RouterRoles, URI};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
@@ -22,7 +24,11 @@ pub struct ErrorDetails {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
 pub struct SubscribeOptions {
-    #[serde(default, rename = "match", skip_serializing_if = "MatchingPolicy::is_strict")]
+    #[serde(
+        default,
+        rename = "match",
+        skip_serializing_if = "MatchingPolicy::is_strict"
+    )]
     pub pattern_match: MatchingPolicy,
 }
 
@@ -34,10 +40,18 @@ pub struct PublishOptions {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
 pub struct RegisterOptions {
-    #[serde(default, rename = "match", skip_serializing_if = "MatchingPolicy::is_strict")]
+    #[serde(
+        default,
+        rename = "match",
+        skip_serializing_if = "MatchingPolicy::is_strict"
+    )]
     pub pattern_match: MatchingPolicy,
 
-    #[serde(default, rename = "invoke", skip_serializing_if = "InvocationPolicy::is_single")]
+    #[serde(
+        default,
+        rename = "invoke",
+        skip_serializing_if = "InvocationPolicy::is_single"
+    )]
     pub invocation_policy: InvocationPolicy,
 }
 
@@ -70,15 +84,12 @@ pub struct ResultDetails {}
 
 impl HelloDetails {
     pub fn new(roles: ClientRoles) -> HelloDetails {
-        HelloDetails {
-            roles: roles,
-            agent: None,
-        }
+        HelloDetails { roles, agent: None }
     }
 
     pub fn new_with_agent(roles: ClientRoles, agent: &str) -> HelloDetails {
         HelloDetails {
-            roles: roles,
+            roles,
             agent: Some(agent.to_string()),
         }
     }
@@ -86,15 +97,12 @@ impl HelloDetails {
 
 impl WelcomeDetails {
     pub fn new(roles: RouterRoles) -> WelcomeDetails {
-        WelcomeDetails {
-            roles: roles,
-            agent: None,
-        }
+        WelcomeDetails { roles, agent: None }
     }
 
     pub fn new_with_agent(roles: RouterRoles, agent: &str) -> WelcomeDetails {
         WelcomeDetails {
-            roles: roles,
+            roles,
             agent: Some(agent.to_string()),
         }
     }
@@ -122,9 +130,7 @@ impl SubscribeOptions {
 
 impl PublishOptions {
     pub fn new(acknowledge: bool) -> PublishOptions {
-        PublishOptions {
-            acknowledge: acknowledge,
-        }
+        PublishOptions { acknowledge }
     }
 
     pub fn should_acknowledge(&self) -> bool {

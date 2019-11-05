@@ -1,5 +1,8 @@
-use super::is_not;
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+use super::is_not;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct ClientRoles {

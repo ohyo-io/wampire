@@ -1,9 +1,12 @@
-use super::{CallError, Reason};
-use itertools::Itertools;
-use serde;
 use std::collections::HashMap;
 use std::fmt;
-use CallResult;
+
+use itertools::Itertools;
+use serde;
+
+use crate::CallResult;
+
+use super::{CallError, Reason};
 
 pub type Dict = HashMap<String, Value>;
 pub type List = Vec<Value>;
@@ -158,10 +161,12 @@ impl Value {
             Value::Dict(ref d) => {
                 let mut result = String::new();
                 result.push('{');
-                result.push_str(&d.iter()
-                    .take(50)
-                    .map(|(key, value)| format!("{}:{}", key, value.summarize()))
-                    .join(","));
+                result.push_str(
+                    &d.iter()
+                        .take(50)
+                        .map(|(key, value)| format!("{}:{}", key, value.summarize()))
+                        .join(","),
+                );
                 result.push('}');
                 result
             }
@@ -178,10 +183,12 @@ impl Value {
             Value::List(ref l) => {
                 let mut result = String::new();
                 result.push('[');
-                result.push_str(&l.iter()
-                    .take(50)
-                    .map(|element| element.summarize())
-                    .join(","));
+                result.push_str(
+                    &l.iter()
+                        .take(50)
+                        .map(|element| element.summarize())
+                        .join(","),
+                );
                 result.push(']');
                 result
             }
@@ -194,7 +201,7 @@ impl Value {
 impl<'de> serde::de::Visitor<'de> for ValueVisitor {
     type Value = Value;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("JSON value")
     }
 
@@ -326,7 +333,7 @@ impl<'de> serde::Deserialize<'de> for URI {
 impl<'de> serde::de::Visitor<'de> for URIVisitor {
     type Value = URI;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("URI")
     }
     #[inline]

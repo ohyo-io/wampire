@@ -1,15 +1,18 @@
 //! Contains the `RegistrationPatternNode` struct, which is used for constructing a trie corresponding
 //! to pattern based registration
-use super::super::{random_id, ConnectionInfo};
-use itertools::Itertools;
-use messages::Reason;
-use rand::thread_rng;
-use rand::Rng;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::sync::{Arc, Mutex};
-use {InvocationPolicy, MatchingPolicy, ID, URI};
+
+use itertools::Itertools;
+use rand::thread_rng;
+use rand::Rng;
+
+use crate::messages::Reason;
+use crate::{InvocationPolicy, MatchingPolicy, ID, URI};
+
+use super::super::{random_id, ConnectionInfo};
 
 /// Contains a trie corresponding to the registration patterns that connections have requested.
 ///
@@ -17,7 +20,6 @@ use {InvocationPolicy, MatchingPolicy, ID, URI};
 /// Thus each registration that starts with 'com' for example will be grouped together.
 /// Registrations can be added and removed, and the connections that match a particular URI
 /// can be iterated over using the `filter()` method.
-
 pub struct RegistrationPatternNode<P: PatternData> {
     edges: HashMap<String, RegistrationPatternNode<P>>,
     connections: ProcdureCollection<P>,
@@ -51,7 +53,7 @@ pub struct PatternError {
 impl PatternError {
     #[inline]
     pub fn new(reason: Reason) -> PatternError {
-        PatternError { reason: reason }
+        PatternError { reason }
     }
 
     pub fn reason(self) -> Reason {
@@ -66,7 +68,7 @@ impl PatternData for Arc<Mutex<ConnectionInfo>> {
 }
 
 impl<P: PatternData> Debug for RegistrationPatternNode<P> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.fmt_with_indent(f, 0)
     }
 }
@@ -89,7 +91,7 @@ impl<P: PatternData> ProcdureCollection<P> {
                 && invocation_policy != InvocationPolicy::Single)
         {
             self.procedures.push(DataWrapper {
-                registrant: registrant,
+                registrant,
                 policy: matching_policy,
             });
             self.invocation_policy = invocation_policy;
@@ -123,8 +125,8 @@ impl<P: PatternData> ProcdureCollection<P> {
 }
 
 impl<P: PatternData> RegistrationPatternNode<P> {
-    fn fmt_with_indent(&self, f: &mut Formatter, indent: usize) -> fmt::Result {
-        try!(writeln!(
+    fn fmt_with_indent(&self, f: &mut Formatter<'_>, indent: usize) -> fmt::Result {
+        writeln!(
             f,
             "{} pre: {:?} subs: {:?}",
             self.id,
@@ -138,13 +140,13 @@ impl<P: PatternData> RegistrationPatternNode<P> {
                 .iter()
                 .map(|sub| sub.registrant.get_id())
                 .join(",")
-        ));
+        )?;
         for (chunk, node) in &self.edges {
             for _ in 0..indent * 2 {
-                try!(write!(f, "  "));
+                write!(f, "  ")?;
             }
-            try!(write!(f, "{} - ", chunk));
-            try!(node.fmt_with_indent(f, indent + 1));
+            write!(f, "{} - ", chunk)?;
+            node.fmt_with_indent(f, indent + 1)?;
         }
         Ok(())
     }
@@ -162,7 +164,8 @@ impl<P: PatternData> RegistrationPatternNode<P> {
             Some(initial) => initial,
             None => return Err(PatternError::new(Reason::InvalidURI)),
         };
-        let edge = self.edges
+        let edge = self
+            .edges
             .entry(initial.to_string())
             .or_insert_with(RegistrationPatternNode::new);
         edge.add_registration(uri_bits, registrant, matching_policy, invocation_policy)
@@ -226,25 +229,26 @@ impl<P: PatternData> RegistrationPatternNode<P> {
                 if uri_bit.is_empty() && matching_policy != MatchingPolicy::Wildcard {
                     return Err(PatternError::new(Reason::InvalidURI));
                 }
-                let edge = self.edges
+                let edge = self
+                    .edges
                     .entry(uri_bit.to_string())
                     .or_insert_with(RegistrationPatternNode::new);
                 edge.add_registration(uri_bits, registrant, matching_policy, invocation_policy)
             }
             None => {
                 if matching_policy == MatchingPolicy::Prefix {
-                    try!(self.prefix_connections.add_procedure(
+                    self.prefix_connections.add_procedure(
                         registrant,
                         matching_policy,
-                        invocation_policy
-                    ));
+                        invocation_policy,
+                    )?;
                     Ok(self.prefix_id)
                 } else {
-                    try!(self.connections.add_procedure(
+                    self.connections.add_procedure(
                         registrant,
                         matching_policy,
-                        invocation_policy
-                    ));
+                        invocation_policy,
+                    )?;
                     Ok(self.id)
                 }
             }
@@ -266,7 +270,7 @@ impl<P: PatternData> RegistrationPatternNode<P> {
                 if let Some(edge) = self.edges.get_mut(uri_bit) {
                     edge.remove_registration(uri_bits, registrant_id, is_prefix)
                 } else {
-                    return Err(PatternError::new(Reason::InvalidURI));
+                    Err(PatternError::new(Reason::InvalidURI))
                 }
             }
             None => {
@@ -317,7 +321,7 @@ impl<P: PatternData> RegistrationPatternNode<P> {
 #[cfg(test)]
 mod test {
     use super::{PatternData, RegistrationPatternNode};
-    use {InvocationPolicy, MatchingPolicy, ID, URI};
+    use crate::{InvocationPolicy, MatchingPolicy, ID, URI};
 
     #[derive(Clone)]
     struct MockData {
@@ -331,7 +335,7 @@ mod test {
     }
     impl MockData {
         pub fn new(id: ID) -> MockData {
-            MockData { id: id }
+            MockData { id }
         }
     }
 
@@ -349,25 +353,29 @@ mod test {
                 connection1,
                 MatchingPolicy::Wildcard,
                 InvocationPolicy::Single,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.register_with(
                 &URI::new("com.example.test.specific.topic"),
                 connection2,
                 MatchingPolicy::Strict,
                 InvocationPolicy::Single,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.register_with(
                 &URI::new("com.example"),
                 connection3,
                 MatchingPolicy::Prefix,
                 InvocationPolicy::Single,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.register_with(
                 &URI::new("com.example.test"),
                 connection4,
                 MatchingPolicy::Prefix,
                 InvocationPolicy::Single,
-            ).unwrap(),
+            )
+            .unwrap(),
         ];
         println!("ids: {:?}", ids);
 
@@ -409,25 +417,29 @@ mod test {
                 connection1.clone(),
                 MatchingPolicy::Wildcard,
                 InvocationPolicy::Single,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.register_with(
                 &URI::new("com.example.test.specific.topic"),
                 connection2,
                 MatchingPolicy::Strict,
                 InvocationPolicy::Single,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.register_with(
                 &URI::new("com.example"),
                 connection3,
                 MatchingPolicy::Prefix,
                 InvocationPolicy::Single,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.register_with(
                 &URI::new("com.example.test"),
                 connection4.clone(),
                 MatchingPolicy::Prefix,
                 InvocationPolicy::Single,
-            ).unwrap(),
+            )
+            .unwrap(),
         ];
 
         root.unregister_with("com.example.test..topic", &connection1, false)

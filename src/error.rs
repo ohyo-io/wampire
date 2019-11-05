@@ -1,17 +1,21 @@
-use super::{ErrorType, Message, ID};
-use messages::{self, Reason};
-use rmp_serde::decode::Error as MsgPackError;
-use serde_json::Error as JSONError;
 use std::fmt;
 use std::sync::mpsc::SendError;
+
+use rmp_serde::decode::Error as MsgPackError;
+use serde_json::Error as JSONError;
 use url::ParseError;
 use ws::Error as WSError;
+
+use crate::messages::{self, Reason};
+
+use super::{ErrorType, Message, ID};
 
 #[derive(Debug)]
 pub struct Error {
     pub kind: ErrorKind,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum ErrorKind {
     WSError(WSError),
@@ -31,7 +35,7 @@ pub enum ErrorKind {
 }
 impl Error {
     pub fn new(kind: ErrorKind) -> Error {
-        Error { kind: kind }
+        Error { kind }
     }
 
     fn get_description(&self) -> String {
@@ -45,7 +49,7 @@ impl Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.get_description())
     }
 }

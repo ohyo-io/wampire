@@ -1,12 +1,17 @@
-use super::{ConnectionHandler, ConnectionState, WAMP_JSON, WAMP_MSGPACK};
 use std::sync::Arc;
 
-use router::messaging::send_message;
-use ws::{CloseCode, Error as WSError, ErrorKind as WSErrorKind, Request, Response,
-         Result as WSResult};
+use log::{debug, info, warn};
+use ws::{
+    CloseCode, Error as WSError, ErrorKind as WSErrorKind, Request, Response, Result as WSResult,
+};
 
-use messages::{ErrorDetails, HelloDetails, Message, Reason, RouterRoles, WelcomeDetails, URI};
-use {Error, ErrorKind, WampResult};
+use crate::messages::{
+    ErrorDetails, HelloDetails, Message, Reason, RouterRoles, WelcomeDetails, URI,
+};
+use crate::router::messaging::send_message;
+use crate::{Error, ErrorKind, WampResult};
+
+use super::{ConnectionHandler, ConnectionState, WAMP_JSON, WAMP_MSGPACK};
 
 impl ConnectionHandler {
     pub fn handle_hello(&mut self, realm: URI, _details: HelloDetails) -> WampResult<()> {
@@ -17,7 +22,7 @@ impl ConnectionHandler {
             info.id
         };
 
-        try!(self.set_realm(realm.uri));
+        self.set_realm(realm.uri)?;
         send_message(
             &self.info,
             &Message::Welcome(id, WelcomeDetails::new(RouterRoles::new())),
@@ -39,7 +44,8 @@ impl ConnectionHandler {
                 send_message(
                     &self.info,
                     &Message::Goodbye(ErrorDetails::new(), Reason::GoodbyeAndOut),
-                ).ok();
+                )
+                .ok();
                 let mut info = self.info.lock().unwrap();
                 info.state = ConnectionState::Disconnected;
                 match info.sender.close(CloseCode::Normal) {
@@ -85,7 +91,7 @@ impl ConnectionHandler {
 
     pub fn process_protocol(&mut self, request: &Request, response: &mut Response) -> WSResult<()> {
         debug!("Checking protocol");
-        let protocols = try!(request.protocols());
+        let protocols = request.protocols()?;
         for protocol in protocols {
             if protocol == WAMP_JSON || protocol == WAMP_MSGPACK {
                 response.set_protocol(protocol);

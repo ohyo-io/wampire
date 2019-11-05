@@ -1,17 +1,22 @@
-use super::{ConnectionHandler, ConnectionInfo, ConnectionState, WAMP_JSON};
+use std::collections::HashMap;
+use std::io::Cursor;
 use std::sync::{Arc, Mutex};
-use ws::{CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler, Message as WSMessage,
-         Request, Response, Result as WSResult, Sender};
 
-use messages::{ErrorDetails, ErrorType, Message, Reason};
+use log::{debug, error, info, trace};
 use rmp_serde::Deserializer as RMPDeserializer;
 use rmp_serde::Serializer;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::collections::HashMap;
-use std::io::Cursor;
-use utils::StructMapWriter;
-use {Dict, Error, ErrorKind, List, WampResult, ID};
+use ws::{
+    CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler, Message as WSMessage, Request,
+    Response, Result as WSResult, Sender,
+};
+
+use crate::messages::{ErrorDetails, ErrorType, Message, Reason};
+use crate::utils::StructMapWriter;
+use crate::{Dict, Error, ErrorKind, List, WampResult, ID};
+
+use super::{ConnectionHandler, ConnectionInfo, ConnectionState, WAMP_JSON};
 
 pub fn send_message(info: &Arc<Mutex<ConnectionInfo>>, message: &Message) -> WampResult<()> {
     let info = info.lock().unwrap();
@@ -135,7 +140,8 @@ impl ConnectionHandler {
         send_message(
             &self.info,
             &Message::Error(err_type, request_id, HashMap::new(), reason, None, None),
-        ).map_err(|e| {
+        )
+        .map_err(|e| {
             let kind = e.get_kind();
             if let ErrorKind::WSError(e) = kind {
                 e
@@ -163,7 +169,7 @@ impl ConnectionHandler {
             ErrorKind::URLError(_) => unimplemented!(),
             ErrorKind::HandshakeError(r) => {
                 error!("Handshake error: {}", r);
-                try!(self.send_abort(r));
+                self.send_abort(r)?;
                 self.terminate_connection()
             }
             ErrorKind::UnexpectedMessage(msg) => {
@@ -173,7 +179,7 @@ impl ConnectionHandler {
             ErrorKind::ThreadError(_) => unimplemented!(),
             ErrorKind::ConnectionLost => unimplemented!(),
             ErrorKind::Closing(_) => {
-                unimplemented!{}
+                unimplemented! {}
             }
             ErrorKind::JSONError(e) => {
                 error!("Could not parse JSON: {}", e);
@@ -211,7 +217,7 @@ impl Handler for ConnectionHandler {
                 return Err(e);
             }
         };
-        try!(self.process_protocol(request, &mut response));
+        self.process_protocol(request, &mut response)?;
         debug!("Sending response");
         Ok(response)
     }
