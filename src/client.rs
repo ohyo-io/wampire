@@ -1,16 +1,3 @@
-use ws::{connect, CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler, Handshake,
-         Message as WSMessage, Request, Result as WSResult, Sender};
-
-use ws::util::Token;
-
-use eventual::{Complete, Future};
-use messages::{CallOptions, ClientRoles, Dict, ErrorDetails, ErrorType, HelloDetails,
-               InvocationDetails, List, MatchingPolicy, Message, PublishOptions, Reason,
-               RegisterOptions, ResultDetails, SubscribeOptions, WelcomeDetails, YieldOptions, URI};
-use rmp_serde::Deserializer as RMPDeserializer;
-use rmp_serde::Serializer;
-use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Cursor;
@@ -18,9 +5,27 @@ use std::sync::mpsc::{channel, Sender as CHSender};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::Duration;
+
+use eventual::{Complete, Future};
+use log::{debug, error, info, trace, warn};
+use rmp_serde::Deserializer as RMPDeserializer;
+use rmp_serde::Serializer;
+use serde::{Deserialize, Serialize};
+use serde_json;
 use url::Url;
-use utils::StructMapWriter;
-use {CallError, CallResult, Error, ErrorKind, WampResult, ID};
+use ws::util::Token;
+use ws::{
+    connect, CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler, Handshake,
+    Message as WSMessage, Request, Result as WSResult, Sender,
+};
+
+use crate::messages::{
+    CallOptions, ClientRoles, Dict, ErrorDetails, ErrorType, HelloDetails, InvocationDetails, List,
+    MatchingPolicy, Message, PublishOptions, Reason, RegisterOptions, ResultDetails,
+    SubscribeOptions, WelcomeDetails, YieldOptions, URI,
+};
+use crate::utils::StructMapWriter;
+use crate::{CallError, CallResult, Error, ErrorKind, WampResult, ID};
 
 const CONNECTION_TIMEOUT: Token = Token(124);
 
@@ -42,17 +47,17 @@ pub struct Registration {
 }
 
 struct SubscriptionCallbackWrapper {
-    callback: Box<FnMut(List, Dict)>,
+    callback: Box<dyn FnMut(List, Dict)>,
 }
 
 struct RegistrationCallbackWrapper {
     callback: Callback,
 }
 
-pub type Callback = Box<FnMut(List, Dict) -> CallResult<(Option<List>, Option<Dict>)>>;
+pub type Callback = Box<dyn FnMut(List, Dict) -> CallResult<(Option<List>, Option<Dict>)>>;
 
-static WAMP_JSON: &'static str = "wamp.2.json";
-static WAMP_MSGPACK: &'static str = "wamp.2.msgpack";
+static WAMP_JSON: &str = "wamp.2.json";
+static WAMP_MSGPACK: &str = "wamp.2.msgpack";
 
 #[derive(PartialEq, Debug)]
 enum ConnectionState {
@@ -189,7 +194,8 @@ impl Connection {
                     connection_info: info,
                     realm: realm.clone(),
                 }
-            }).map_err(|e| Error::new(ErrorKind::WSError(e)));
+            })
+            .map_err(|e| Error::new(ErrorKind::WSError(e)));
             debug!("Result of connection: {:?}", connect_result);
             match connect_result {
                 Ok(_) => (),
@@ -198,7 +204,7 @@ impl Connection {
                 }
             }
         });
-        let info = try!(rx.recv().unwrap());
+        let info = rx.recv().unwrap()?;
         Ok(Client {
             connection_info: info,
             max_session_id: 0,
@@ -228,7 +234,7 @@ impl Handler for ConnectionHandler {
     fn on_open(&mut self, handshake: Handshake) -> WSResult<()> {
         debug!("Connection Opened");
         let mut info = self.connection_info.lock().unwrap();
-        info.protocol = match try!(handshake.response.protocol()) {
+        info.protocol = match handshake.response.protocol()? {
             Some(protocol) => protocol.to_string(),
             None => {
                 warn!("Router did not specify protocol. Defaulting to wamp.2.json");
@@ -317,7 +323,7 @@ impl Handler for ConnectionHandler {
 
     fn build_request(&mut self, url: &Url) -> WSResult<Request> {
         trace!("Building request");
-        let mut request = try!(Request::from_url(url));
+        let mut request = Request::from_url(url)?;
         request.add_protocol(WAMP_MSGPACK);
         request.add_protocol(WAMP_JSON);
         Ok(request)
@@ -359,16 +365,15 @@ impl ConnectionHandler {
                         self.handle_registered(info, request_id, registration_id)
                     }
                     Message::Unregistered(request_id) => self.handle_unregistered(info, request_id),
-                    Message::Invocation(request_id, registration_id, details, args, kwargs) => {
-                        self.handle_invocation(
+                    Message::Invocation(request_id, registration_id, details, args, kwargs) => self
+                        .handle_invocation(
                             info,
                             request_id,
                             registration_id,
                             details,
                             args,
                             kwargs,
-                        )
-                    }
+                        ),
                     Message::Result(call_id, details, args, kwargs) => {
                         self.handle_result(info, call_id, details, args, kwargs)
                     }
@@ -408,7 +413,7 @@ impl ConnectionHandler {
 
     fn handle_subscribed(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         subscription_id: ID,
     ) {
@@ -418,8 +423,8 @@ impl ConnectionHandler {
             Some((promise, callback, topic)) => {
                 debug!("Completing promise");
                 let subscription = Subscription {
-                    topic: topic,
-                    subscription_id: subscription_id,
+                    topic,
+                    subscription_id,
                 };
                 info.subscriptions.insert(subscription_id, callback);
                 drop(info);
@@ -436,7 +441,7 @@ impl ConnectionHandler {
 
     fn handle_subscribe_error(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         reason: Reason,
         args: Option<List>,
@@ -457,7 +462,7 @@ impl ConnectionHandler {
         }
     }
 
-    fn handle_unsubscribed(&self, mut info: MutexGuard<ConnectionInfo>, request_id: ID) {
+    fn handle_unsubscribed(&self, mut info: MutexGuard<'_, ConnectionInfo>, request_id: ID) {
         match info.unsubscription_requests.remove(&request_id) {
             Some((promise, subscription_id)) => {
                 info.unsubscription_requests.remove(&subscription_id);
@@ -472,7 +477,7 @@ impl ConnectionHandler {
 
     fn handle_unsubscribe_error(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         reason: Reason,
         args: Option<List>,
@@ -495,7 +500,7 @@ impl ConnectionHandler {
 
     fn handle_registered(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         registration_id: ID,
     ) {
@@ -506,8 +511,8 @@ impl ConnectionHandler {
                 info.registrations.insert(registration_id, callback);
                 drop(info);
                 let registration = Registration {
-                    procedure: procedure,
-                    registration_id: registration_id,
+                    procedure,
+                    registration_id,
                 };
                 promise.complete(registration)
             }
@@ -522,7 +527,7 @@ impl ConnectionHandler {
 
     fn handle_register_error(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         reason: Reason,
         args: Option<List>,
@@ -543,7 +548,7 @@ impl ConnectionHandler {
         }
     }
 
-    fn handle_unregistered(&self, mut info: MutexGuard<ConnectionInfo>, request_id: ID) {
+    fn handle_unregistered(&self, mut info: MutexGuard<'_, ConnectionInfo>, request_id: ID) {
         match info.unregistration_requests.remove(&request_id) {
             Some((promise, registration_id)) => {
                 info.registrations.remove(&registration_id);
@@ -558,7 +563,7 @@ impl ConnectionHandler {
 
     fn handle_unregister_error(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         reason: Reason,
         args: Option<List>,
@@ -580,7 +585,7 @@ impl ConnectionHandler {
 
     fn handle_published(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         publication_id: ID,
     ) {
@@ -596,7 +601,7 @@ impl ConnectionHandler {
     }
     fn handle_publish_error(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         reason: Reason,
         args: Option<List>,
@@ -610,7 +615,7 @@ impl ConnectionHandler {
 
     fn handle_welcome(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         session_id: ID,
         _details: WelcomeDetails,
     ) {
@@ -622,14 +627,14 @@ impl ConnectionHandler {
             .unwrap();
     }
 
-    fn handle_abort(&self, mut info: MutexGuard<ConnectionInfo>, reason: Reason) {
+    fn handle_abort(&self, mut info: MutexGuard<'_, ConnectionInfo>, reason: Reason) {
         error!("Router aborted connection.  Reason: {:?}", reason);
         info.connection_state = ConnectionState::ShuttingDown;
     }
 
     fn handle_event(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         subscription_id: ID,
         args: Option<List>,
         kwargs: Option<Dict>,
@@ -652,7 +657,7 @@ impl ConnectionHandler {
 
     fn handle_invocation(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         registration_id: ID,
         _details: InvocationDetails,
@@ -694,7 +699,7 @@ impl ConnectionHandler {
 
     fn handle_result(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         call_id: ID,
         _details: ResultDetails,
         args: Option<List>,
@@ -717,7 +722,7 @@ impl ConnectionHandler {
 
     fn handle_call_error(
         &self,
-        mut info: MutexGuard<ConnectionInfo>,
+        mut info: MutexGuard<'_, ConnectionInfo>,
         request_id: ID,
         reason: Reason,
         args: Option<List>,
@@ -734,7 +739,7 @@ impl ConnectionHandler {
         }
     }
 
-    fn handle_goodbye(&self, mut info: MutexGuard<ConnectionInfo>, reason: Reason) {
+    fn handle_goodbye(&self, mut info: MutexGuard<'_, ConnectionInfo>, reason: Reason) {
         info!("Router said goodbye.  Reason: {:?}", reason);
 
         info.send_message(Message::Goodbye(ErrorDetails::new(), Reason::GoodbyeAndOut))
@@ -742,10 +747,10 @@ impl ConnectionHandler {
         info.connection_state = ConnectionState::ShuttingDown;
     }
 
-    #[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+    #[allow(clippy::too_many_arguments)]
     fn handle_error(
         &self,
-        info: MutexGuard<ConnectionInfo>,
+        info: MutexGuard<'_, ConnectionInfo>,
         e_type: ErrorType,
         request_id: ID,
         _details: Dict,
@@ -788,13 +793,13 @@ impl Client {
     pub fn subscribe_with_pattern(
         &mut self,
         topic_pattern: URI,
-        callback: Box<FnMut(List, Dict)>,
+        callback: Box<dyn FnMut(List, Dict)>,
         policy: MatchingPolicy,
     ) -> WampResult<Future<Subscription, CallError>> {
         // Send a subscribe messages
         let request_id = self.get_next_session_id();
         let (complete, future) = Future::<Subscription, CallError>::pair();
-        let callback = SubscriptionCallbackWrapper { callback: callback };
+        let callback = SubscriptionCallbackWrapper { callback };
         let mut options = SubscribeOptions::new();
         if policy != MatchingPolicy::Strict {
             options.pattern_match = policy
@@ -802,14 +807,14 @@ impl Client {
         let mut info = self.connection_info.lock().unwrap();
         info.subscription_requests
             .insert(request_id, (complete, callback, topic_pattern.clone()));
-        try!(info.send_message(Message::Subscribe(request_id, options, topic_pattern)));
+        info.send_message(Message::Subscribe(request_id, options, topic_pattern))?;
         Ok(future)
     }
 
     pub fn subscribe(
         &mut self,
         topic: URI,
-        callback: Box<FnMut(List, Dict)>,
+        callback: Box<dyn FnMut(List, Dict)>,
     ) -> WampResult<Future<Subscription, CallError>> {
         self.subscribe_with_pattern(topic, callback, MatchingPolicy::Strict)
     }
@@ -823,7 +828,7 @@ impl Client {
         // Send a register message
         let request_id = self.get_next_session_id();
         let (complete, future) = Future::<Registration, CallError>::pair();
-        let callback = RegistrationCallbackWrapper { callback: callback };
+        let callback = RegistrationCallbackWrapper { callback };
         let mut options = RegisterOptions::new();
         if policy != MatchingPolicy::Strict {
             options.pattern_match = policy
@@ -833,7 +838,7 @@ impl Client {
         debug!("Lock on connection info acquired");
         info.registration_requests
             .insert(request_id, (complete, callback, procedure_pattern.clone()));
-        try!(info.send_message(Message::Register(request_id, options, procedure_pattern)));
+        info.send_message(Message::Register(request_id, options, procedure_pattern))?;
         Ok(future)
     }
 
@@ -848,10 +853,10 @@ impl Client {
     pub fn unsubscribe(&mut self, subscription: Subscription) -> WampResult<Future<(), CallError>> {
         let request_id = self.get_next_session_id();
         let mut info = self.connection_info.lock().unwrap();
-        try!(info.send_message(Message::Unsubscribe(
+        info.send_message(Message::Unsubscribe(
             request_id,
-            subscription.subscription_id
-        )));
+            subscription.subscription_id,
+        ))?;
         let (complete, future) = Future::<(), CallError>::pair();
         info.unsubscription_requests
             .insert(request_id, (complete, subscription.subscription_id));
@@ -861,10 +866,10 @@ impl Client {
     pub fn unregister(&mut self, registration: Registration) -> WampResult<Future<(), CallError>> {
         let request_id = self.get_next_session_id();
         let mut info = self.connection_info.lock().unwrap();
-        try!(info.send_message(Message::Unregister(
+        info.send_message(Message::Unregister(
             request_id,
-            registration.registration_id
-        )));
+            registration.registration_id,
+        ))?;
         let (complete, future) = Future::<(), CallError>::pair();
 
         info.unregistration_requests
@@ -903,13 +908,13 @@ impl Client {
         let (complete, future) = Future::<(List, Dict), CallError>::pair();
         let mut info = self.connection_info.lock().unwrap();
         info.call_requests.insert(request_id, complete);
-        try!(info.send_message(Message::Call(
+        info.send_message(Message::Call(
             request_id,
             CallOptions::new(),
             procedure,
             args,
-            kwargs
-        )));
+            kwargs,
+        ))?;
         Ok(future)
     }
 
@@ -924,13 +929,13 @@ impl Client {
         let (complete, future) = Future::<ID, CallError>::pair();
         let mut info = self.connection_info.lock().unwrap();
         info.publish_requests.insert(request_id, complete);
-        try!(info.send_message(Message::Publish(
+        info.send_message(Message::Publish(
             request_id,
             PublishOptions::new(true),
             topic,
             args,
-            kwargs
-        )));
+            kwargs,
+        ))?;
         Ok(future)
     }
 
@@ -941,10 +946,10 @@ impl Client {
             let (complete, future) = Future::pair();
             info.shutdown_complete = Some(complete);
             // TODO add timeout in case server doesn't respond.
-            try!(info.send_message(Message::Goodbye(
+            info.send_message(Message::Goodbye(
                 ErrorDetails::new(),
-                Reason::SystemShutdown
-            )));
+                Reason::SystemShutdown,
+            ))?;
             Ok(future)
         } else {
             Err(Error::new(ErrorKind::InvalidState(
@@ -955,7 +960,7 @@ impl Client {
 }
 
 impl fmt::Debug for ConnectionHandler {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{{Connection id: {}}}",

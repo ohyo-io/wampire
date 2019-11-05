@@ -1,15 +1,18 @@
-mod patterns;
-
 use std::sync::Arc;
 
-pub use router::rpc::patterns::RegistrationPatternNode;
+use log::{debug, info};
 
+use crate::messages::{
+    CallOptions, ErrorType, InvocationDetails, Message, Reason, RegisterOptions, ResultDetails,
+    YieldOptions, URI,
+};
+use crate::{Dict, Error, ErrorKind, List, MatchingPolicy, WampResult, ID};
+
+use super::messaging::send_message;
 use super::{random_id, ConnectionHandler};
 
-use messages::{CallOptions, ErrorType, InvocationDetails, Message, Reason, RegisterOptions,
-               ResultDetails, YieldOptions, URI};
-use router::messaging::send_message;
-use {Dict, Error, ErrorKind, List, MatchingPolicy, WampResult, ID};
+mod patterns;
+pub use self::patterns::RegistrationPatternNode;
 
 impl ConnectionHandler {
     pub fn handle_register(
@@ -140,7 +143,7 @@ impl ConnectionHandler {
                 };
                 let invocation_message =
                     Message::Invocation(invocation_id, procedure_id, details, args, kwargs);
-                try!(send_message(registrant, &invocation_message));
+                send_message(registrant, &invocation_message)?;
 
                 Ok(())
             }

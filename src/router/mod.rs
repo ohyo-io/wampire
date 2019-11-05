@@ -1,21 +1,25 @@
-mod handshake;
-mod messaging;
-mod pubsub;
-mod rpc;
-
-use super::ID;
-use messages::{ErrorDetails, Message, Reason};
-use rand::distributions::{Distribution, Range};
-use rand::thread_rng;
-use router::messaging::send_message;
-use router::pubsub::SubscriptionPatternNode;
-use router::rpc::RegistrationPatternNode;
 use std::collections::HashMap;
 use std::marker::Sync;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
+
+use log::{debug, info, trace};
+use rand::distributions::{Distribution, Range};
+use rand::thread_rng;
 use ws::{listen as ws_listen, Result as WSResult, Sender};
+
+use crate::messages::{ErrorDetails, Message, Reason};
+
+use super::ID;
+
+mod handshake;
+mod messaging;
+mod pubsub;
+mod rpc;
+use self::messaging::send_message;
+use self::pubsub::SubscriptionPatternNode;
+use self::rpc::RegistrationPatternNode;
 
 struct SubscriptionManager {
     subscriptions: SubscriptionPatternNode<Arc<Mutex<ConnectionInfo>>>,
@@ -65,8 +69,8 @@ enum ConnectionState {
     Disconnected,
 }
 
-static WAMP_JSON: &'static str = "wamp.2.json";
-static WAMP_MSGPACK: &'static str = "wamp.2.msgpack";
+static WAMP_JSON: &str = "wamp.2.json";
+static WAMP_MSGPACK: &str = "wamp.2.msgpack";
 
 fn random_id() -> u64 {
     let mut rng = thread_rng();
@@ -100,7 +104,7 @@ impl Router {
             ws_listen(&url[..], |sender| ConnectionHandler {
                 info: Arc::new(Mutex::new(ConnectionInfo {
                     state: ConnectionState::Initializing,
-                    sender: sender,
+                    sender,
                     protocol: String::new(),
                     id: random_id(),
                 })),
@@ -108,7 +112,8 @@ impl Router {
                 registered_procedures: Vec::new(),
                 realm: None,
                 router: Arc::clone(&router_info),
-            }).unwrap();
+            })
+            .unwrap();
         })
     }
 
@@ -141,7 +146,8 @@ impl Router {
                 send_message(
                     connection,
                     &Message::Goodbye(ErrorDetails::new(), Reason::SystemShutdown),
-                ).ok();
+                )
+                .ok();
                 let mut connection = connection.lock().unwrap();
                 connection.state = ConnectionState::ShuttingDown;
             }

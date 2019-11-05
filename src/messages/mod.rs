@@ -1,19 +1,22 @@
 use std::fmt;
 
-pub use messages::types::*;
 use serde;
-use ID;
+
+pub use crate::messages::types::*;
+use crate::ID;
+
 mod types;
 
 macro_rules! try_or {
     ($e:expr, $msg:expr) => {
-        match try!($e) {
+        match $e? {
             Some(val) => val,
             None => return Err(serde::de::Error::custom($msg)),
         }
     };
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, PartialEq)]
 pub enum Message {
     Hello(URI, HelloDetails),
@@ -217,8 +220,8 @@ impl MessageVisitor {
             visitor.next_element(),
             "Error message ended before reason uri"
         );
-        let args = try!(visitor.next_element());
-        let kwargs = try!(visitor.next_element());
+        let args = visitor.next_element()?;
+        let kwargs = visitor.next_element()?;
         Ok(Message::Error(
             message_type,
             id,
@@ -305,8 +308,8 @@ impl MessageVisitor {
             visitor.next_element(),
             "Publish message ended before topic uri"
         );
-        let args = try!(visitor.next_element());
-        let kwargs = try!(visitor.next_element());
+        let args = visitor.next_element()?;
+        let kwargs = visitor.next_element()?;
         Ok(Message::Publish(id, details, topic, args, kwargs))
     }
 
@@ -341,8 +344,8 @@ impl MessageVisitor {
             visitor.next_element(),
             "Event message ended before details dict"
         );
-        let args = try!(visitor.next_element());
-        let kwargs = try!(visitor.next_element());
+        let args = visitor.next_element()?;
+        let kwargs = visitor.next_element()?;
         Ok(Message::Event(
             subscription_id,
             publication_id,
@@ -428,8 +431,8 @@ impl MessageVisitor {
             visitor.next_element(),
             "Call message ended before procedure uri"
         );
-        let args = try!(visitor.next_element());
-        let kwargs = try!(visitor.next_element());
+        let args = visitor.next_element()?;
+        let kwargs = visitor.next_element()?;
         Ok(Message::Call(id, options, topic, args, kwargs))
     }
 
@@ -449,8 +452,8 @@ impl MessageVisitor {
             visitor.next_element(),
             "Invocation message ended before details dict"
         );
-        let args = try!(visitor.next_element());
-        let kwargs = try!(visitor.next_element());
+        let args = visitor.next_element()?;
+        let kwargs = visitor.next_element()?;
         Ok(Message::Invocation(
             id,
             registration_id,
@@ -472,8 +475,8 @@ impl MessageVisitor {
             visitor.next_element(),
             "Yield message ended before options dict"
         );
-        let args = try!(visitor.next_element());
-        let kwargs = try!(visitor.next_element());
+        let args = visitor.next_element()?;
+        let kwargs = visitor.next_element()?;
         Ok(Message::Yield(id, options, args, kwargs))
     }
 
@@ -489,8 +492,8 @@ impl MessageVisitor {
             visitor.next_element(),
             "Result message ended before details dict"
         );
-        let args = try!(visitor.next_element());
-        let kwargs = try!(visitor.next_element());
+        let args = visitor.next_element()?;
+        let kwargs = visitor.next_element()?;
         Ok(Message::Result(id, details, args, kwargs))
     }
 }
@@ -498,7 +501,7 @@ impl MessageVisitor {
 impl<'de> serde::de::Visitor<'de> for MessageVisitor {
     type Value = Message;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a message")
     }
 
@@ -535,17 +538,18 @@ impl<'de> serde::de::Visitor<'de> for MessageVisitor {
 
 #[cfg(test)]
 mod test {
-    use super::types::{CallOptions, ClientRoles, ErrorDetails, ErrorType, EventDetails,
-                       HelloDetails, InvocationDetails, PublishOptions, Reason, RegisterOptions,
-                       ResultDetails, RouterRoles, SubscribeOptions, Value, WelcomeDetails,
-                       YieldOptions, URI};
+    use super::types::{
+        CallOptions, ClientRoles, ErrorDetails, ErrorType, EventDetails, HelloDetails,
+        InvocationDetails, PublishOptions, Reason, RegisterOptions, ResultDetails, RouterRoles,
+        SubscribeOptions, Value, WelcomeDetails, YieldOptions, URI,
+    };
     use super::Message;
+    use crate::utils::StructMapWriter;
     use rmp_serde::Deserializer as RMPDeserializer;
     use rmp_serde::Serializer;
     use serde::{Deserialize, Serialize};
     use serde_json;
     use std::collections::HashMap;
-    use utils::StructMapWriter;
 
     macro_rules! two_way_test {
         ($message:expr, $s:expr) => {{
@@ -577,11 +581,11 @@ mod test {
     #[test]
     fn serialize_welcome() {
         two_way_test!(
-            Message::Welcome(493782, WelcomeDetails::new(RouterRoles::new_basic())),
+            Message::Welcome(493_782, WelcomeDetails::new(RouterRoles::new_basic())),
             "[2,493782,{\"roles\":{\"dealer\":{},\"broker\":{}}}]"
         );
         two_way_test!(
-            Message::Welcome(493782, WelcomeDetails::new_with_agent(RouterRoles::new(), "dal_wamp")),
+            Message::Welcome(493_782, WelcomeDetails::new_with_agent(RouterRoles::new(), "dal_wamp")),
             "[2,493782,{\"agent\":\"dal_wamp\",\"roles\":{\"dealer\":{\"features\":{\"pattern_based_registration\":true}},\"broker\":{\"features\":{\"pattern_based_subscription\":true}}}}]"
         );
     }
@@ -621,7 +625,7 @@ mod test {
         two_way_test!(
             Message::Error(
                 ErrorType::Subscribe,
-                713845233,
+                713_845_233,
                 HashMap::new(),
                 Reason::NotAuthorized,
                 None,
@@ -633,7 +637,7 @@ mod test {
         two_way_test!(
             Message::Error(
                 ErrorType::Unsubscribe,
-                3746383,
+                3_746_383,
                 HashMap::new(),
                 Reason::InvalidURI,
                 Some(Vec::new()),
@@ -645,7 +649,7 @@ mod test {
         two_way_test!(
             Message::Error(
                 ErrorType::Register,
-                8534533,
+                8_534_533,
                 HashMap::new(),
                 Reason::InvalidArgument,
                 Some(Vec::new()),
@@ -669,7 +673,10 @@ mod test {
 
     #[test]
     fn serialize_subscribed() {
-        two_way_test!(Message::Subscribed(47853, 48975938), "[33,47853,48975938]")
+        two_way_test!(
+            Message::Subscribed(47853, 48_975_938),
+            "[33,47853,48975938]"
+        )
     }
 
     #[test]
@@ -679,14 +686,14 @@ mod test {
 
     #[test]
     fn serialize_unsubscribed() {
-        two_way_test!(Message::Unsubscribed(675343), "[35,675343]")
+        two_way_test!(Message::Unsubscribed(675_343), "[35,675343]")
     }
 
     #[test]
     fn serialize_publish() {
         two_way_test!(
             Message::Publish(
-                453453,
+                453_453,
                 PublishOptions::new(false),
                 URI::new("ca.dal.test.topic1"),
                 None,
@@ -697,7 +704,7 @@ mod test {
 
         two_way_test!(
             Message::Publish(
-                23934583,
+                23_934_583,
                 PublishOptions::new(true),
                 URI::new("ca.dal.test.topic2"),
                 Some(vec![Value::String("a value".to_string())]),
@@ -709,7 +716,7 @@ mod test {
         kwargs.insert("key1".to_string(), Value::List(vec![Value::Integer(-5)]));
         two_way_test!(
             Message::Publish(
-                3243542,
+                3_243_542,
                 PublishOptions::new(true),
                 URI::new("ca.dal.test.topic3"),
                 Some(Vec::new()),
@@ -721,20 +728,20 @@ mod test {
 
     #[test]
     fn serialize_published() {
-        two_way_test!(Message::Published(23443, 564564), "[17,23443,564564]")
+        two_way_test!(Message::Published(23443, 564_564), "[17,23443,564564]")
     }
 
     #[test]
     fn serialize_event() {
         two_way_test!(
-            Message::Event(4353453, 298173, EventDetails::new(), None, None),
+            Message::Event(4_353_453, 298_173, EventDetails::new(), None, None),
             "[36,4353453,298173,{}]"
         );
 
         two_way_test!(
             Message::Event(
-                764346,
-                3895494,
+                764_346,
+                3_895_494,
                 EventDetails::new(),
                 Some(vec![Value::String("a value".to_string())]),
                 None
@@ -746,7 +753,7 @@ mod test {
         two_way_test!(
             Message::Event(
                 65675,
-                587495,
+                587_495,
                 EventDetails::new(),
                 Some(Vec::new()),
                 Some(kwargs)
@@ -758,7 +765,7 @@ mod test {
     #[test]
     fn serialize_register() {
         two_way_test!(
-            Message::Register(25349185, RegisterOptions::new(), URI::new("ca.test.proc")),
+            Message::Register(25_349_185, RegisterOptions::new(), URI::new("ca.test.proc")),
             "[64,25349185,{},\"ca.test.proc\"]"
         );
     }
@@ -766,7 +773,7 @@ mod test {
     #[test]
     fn serialize_registered() {
         two_way_test!(
-            Message::Registered(25349185, 2103333224),
+            Message::Registered(25_349_185, 2_103_333_224),
             "[65,25349185,2103333224]"
         );
     }
@@ -774,21 +781,21 @@ mod test {
     #[test]
     fn serialize_unregister() {
         two_way_test!(
-            Message::Unregister(788923562, 2103333224),
+            Message::Unregister(788_923_562, 2_103_333_224),
             "[66,788923562,2103333224]"
         );
     }
 
     #[test]
     fn serialize_unregistered() {
-        two_way_test!(Message::Unregistered(788923562), "[67,788923562]");
+        two_way_test!(Message::Unregistered(788_923_562), "[67,788923562]");
     }
 
     #[test]
     fn serialize_call() {
         two_way_test!(
             Message::Call(
-                7814135,
+                7_814_135,
                 CallOptions::new(),
                 URI::new("com.myapp.ping"),
                 None,
@@ -799,7 +806,7 @@ mod test {
 
         two_way_test!(
             Message::Call(
-                764346,
+                764_346,
                 CallOptions::new(),
                 URI::new("com.myapp.echo"),
                 Some(vec![Value::String("a value".to_string())]),
@@ -814,7 +821,7 @@ mod test {
         );
         two_way_test!(
             Message::Call(
-                764346,
+                764_346,
                 CallOptions::new(),
                 URI::new("com.myapp.compute"),
                 Some(Vec::new()),
@@ -833,8 +840,8 @@ mod test {
 
         two_way_test!(
             Message::Invocation(
-                764346,
-                9823526,
+                764_346,
+                9_823_526,
                 InvocationDetails::new(),
                 Some(vec![Value::String("a value".to_string())]),
                 None
@@ -848,8 +855,8 @@ mod test {
         );
         two_way_test!(
             Message::Invocation(
-                764346,
-                9823526,
+                764_346,
+                9_823_526,
                 InvocationDetails::new(),
                 Some(Vec::new()),
                 Some(kwargs)
@@ -861,13 +868,13 @@ mod test {
     #[test]
     fn serialize_yield() {
         two_way_test!(
-            Message::Yield(6131533, YieldOptions::new(), None, None),
+            Message::Yield(6_131_533, YieldOptions::new(), None, None),
             "[70,6131533,{}]"
         );
 
         two_way_test!(
             Message::Yield(
-                6131533,
+                6_131_533,
                 YieldOptions::new(),
                 Some(vec![Value::String("a value".to_string())]),
                 None
@@ -880,7 +887,12 @@ mod test {
             Value::List(vec![Value::UnsignedInteger(5)]),
         );
         two_way_test!(
-            Message::Yield(6131533, YieldOptions::new(), Some(Vec::new()), Some(kwargs)),
+            Message::Yield(
+                6_131_533,
+                YieldOptions::new(),
+                Some(Vec::new()),
+                Some(kwargs)
+            ),
             "[70,6131533,{},[],{\"key1\":[5]}]"
         )
     }
@@ -888,13 +900,13 @@ mod test {
     #[test]
     fn serialize_result() {
         two_way_test!(
-            Message::Result(7814135, ResultDetails::new(), None, None),
+            Message::Result(7_814_135, ResultDetails::new(), None, None),
             "[50,7814135,{}]"
         );
 
         two_way_test!(
             Message::Result(
-                764346,
+                764_346,
                 ResultDetails::new(),
                 Some(vec![Value::String("a value".to_string())]),
                 None
@@ -904,9 +916,13 @@ mod test {
         let mut kwargs = HashMap::new();
         kwargs.insert("key1".to_string(), Value::List(vec![Value::Float(8.6)]));
         two_way_test!(
-            Message::Result(764346, ResultDetails::new(), Some(Vec::new()), Some(kwargs)),
+            Message::Result(
+                764_346,
+                ResultDetails::new(),
+                Some(Vec::new()),
+                Some(kwargs)
+            ),
             "[50,764346,{},[],{\"key1\":[8.6]}]"
         )
     }
-
 }

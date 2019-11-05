@@ -1,16 +1,17 @@
+use std::fmt;
+
+use serde;
+
 mod error;
 mod options;
 mod roles;
 mod value;
+pub use error::*;
+pub use options::*;
+pub use roles::*;
+pub use value::*;
 
-use serde;
-use std::fmt;
-
-pub use messages::types::error::*;
-pub use messages::types::options::*;
-pub use messages::types::roles::*;
-pub use messages::types::value::*;
-
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn is_not(b: &bool) -> bool {
     !*b
 }
@@ -53,16 +54,18 @@ struct MatchingPolicyVisitor;
 struct InvocationPolicyVisitor;
 
 impl MatchingPolicy {
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     #[inline]
     fn is_strict(&self) -> bool {
-        self == &MatchingPolicy::Strict
+        *self == MatchingPolicy::Strict
     }
 }
 
 impl InvocationPolicy {
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     #[inline]
     fn is_single(&self) -> bool {
-        self == &InvocationPolicy::Single
+        *self == InvocationPolicy::Single
     }
 }
 
@@ -110,7 +113,7 @@ impl<'de> serde::Deserialize<'de> for MatchingPolicy {
 impl<'de> serde::de::Visitor<'de> for MatchingPolicyVisitor {
     type Value = MatchingPolicy;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("matching policy for registration")
     }
 
@@ -158,7 +161,7 @@ impl<'de> serde::Deserialize<'de> for InvocationPolicy {
 impl<'de> serde::de::Visitor<'de> for InvocationPolicyVisitor {
     type Value = InvocationPolicy;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("invocation policy for a procedure")
     }
 

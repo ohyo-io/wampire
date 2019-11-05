@@ -1,11 +1,17 @@
-mod patterns;
-use super::{random_id, ConnectionHandler};
 use std::sync::Arc;
 
-use messages::{ErrorType, EventDetails, Message, PublishOptions, Reason, SubscribeOptions, URI};
-use router::messaging::send_message;
-pub use router::pubsub::patterns::SubscriptionPatternNode;
-use {Dict, Error, ErrorKind, List, MatchingPolicy, WampResult};
+use log::{debug, info};
+
+use crate::messages::{
+    ErrorType, EventDetails, Message, PublishOptions, Reason, SubscribeOptions, URI,
+};
+use crate::{Dict, Error, ErrorKind, List, MatchingPolicy, WampResult};
+
+use super::messaging::send_message;
+use super::{random_id, ConnectionHandler};
+
+mod patterns;
+pub use self::patterns::SubscriptionPatternNode;
 
 impl ConnectionHandler {
     pub fn handle_subscribe(
@@ -107,13 +113,8 @@ impl ConnectionHandler {
                 let realm = realm.lock().unwrap();
                 let manager = &realm.subscription_manager;
                 let publication_id = random_id();
-                let mut event_message = Message::Event(
-                    1,
-                    publication_id,
-                    EventDetails::new(),
-                    args.clone(),
-                    kwargs.clone(),
-                );
+                let mut event_message =
+                    Message::Event(1, publication_id, EventDetails::new(), args, kwargs);
                 let my_id = { self.info.lock().unwrap().id };
                 info!("Current topic tree: {:?}", manager.subscriptions);
                 for (subscriber, topic_id, policy) in manager.subscriptions.filter(topic.clone()) {
@@ -133,14 +134,11 @@ impl ConnectionHandler {
                                 Some(topic.clone())
                             };
                         }
-                        try!(send_message(subscriber, &event_message));
+                        send_message(subscriber, &event_message)?;
                     }
                 }
                 if options.should_acknowledge() {
-                    try!(send_message(
-                        &self.info,
-                        &Message::Published(request_id, publication_id)
-                    ));
+                    send_message(&self.info, &Message::Published(request_id, publication_id))?;
                 }
                 Ok(())
             }

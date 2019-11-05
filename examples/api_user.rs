@@ -1,13 +1,11 @@
-extern crate eventual;
-extern crate wampire;
-use eventual::Async;
 use std::io;
+
+use log::info;
+use env_logger;
+use eventual::Async;
+
 use wampire::client::{Client, Connection};
 use wampire::{ArgList, Value, URI};
-
-#[macro_use]
-extern crate log;
-extern crate env_logger;
 
 enum Command {
     Add,
@@ -52,6 +50,7 @@ fn process_input(input: &str) -> (Command, Vec<String>) {
     (command, args)
 }
 
+#[allow(clippy::comparison_chain)]
 fn add(client: &mut Client, args: &[String]) {
     if args.len() > 2 {
         println!("Too many arguments to add.  Ignoring");
@@ -81,7 +80,7 @@ fn add(client: &mut Client, args: &[String]) {
             None,
         )
         .unwrap()
-        .await()
+        .r#await()
     {
         Ok((args, _)) => {
             println!("Result: {}", args.get_int(0).unwrap().unwrap());
@@ -98,11 +97,11 @@ fn add(client: &mut Client, args: &[String]) {
 }
 
 fn echo(client: &mut Client, args: Vec<String>) {
-    let args = args.into_iter().map(|arg| Value::String(arg)).collect();
+    let args = args.into_iter().map(Value::String).collect();
     let result = client
         .call(URI::new("ca.test.echo"), Some(args), None)
         .unwrap()
-        .await();
+        .r#await();
     println!("Result: {:?}", result);
 }
 
@@ -131,12 +130,12 @@ fn event_loop(mut client: Client) {
             Command::Invalid(bad_command) => print!("Invalid command: {}", bad_command),
         }
     }
-    client.shutdown().unwrap().await().unwrap();
+    client.shutdown().unwrap().r#await().unwrap();
 }
 
 fn main() {
     env_logger::init();
-    let connection = Connection::new("ws://127.0.0.1:8090/ws", "wampire_realm");
+    let connection = Connection::new("ws://127.0.0.1:8080/ws", "demo");
     info!("Connecting");
     let client = connection.connect().unwrap();
 

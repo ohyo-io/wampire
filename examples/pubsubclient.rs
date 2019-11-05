@@ -1,14 +1,12 @@
-extern crate eventual;
-extern crate wampire;
-use eventual::Async;
 use std::io;
 use std::sync::{Arc, Mutex};
+
+use env_logger;
+use eventual::Async;
+use log::info;
+
 use wampire::client::{Client, Connection, Subscription};
 use wampire::{MatchingPolicy, Value, URI};
-
-#[macro_use]
-extern crate log;
-extern crate env_logger;
 
 enum Command {
     Sub,
@@ -100,7 +98,7 @@ fn subscribe(
             subscriptions.lock().unwrap().push(subscription);
             Ok(())
         })
-        .await()
+        .r#await()
         .unwrap();
 }
 
@@ -131,7 +129,7 @@ fn unsubscribe(
                     println!("Successfully unsubscribed from {}", topic);
                     Ok(())
                 })
-                .await()
+                .r#await()
                 .unwrap();
         }
         Err(_) => {
@@ -162,7 +160,7 @@ fn publish(client: &mut Client, args: &[String]) {
     client
         .publish_and_acknowledge(URI::new(uri), Some(args), None)
         .unwrap()
-        .await()
+        .r#await()
         .unwrap();
 }
 
@@ -202,7 +200,7 @@ fn event_loop(mut client: Client) {
             Command::Invalid(bad_command) => print!("Invalid command: {}", bad_command),
         }
     }
-    client.shutdown().unwrap().await().unwrap();
+    client.shutdown().unwrap().r#await().unwrap();
 }
 
 fn main() {

@@ -1,7 +1,10 @@
-use super::{Dict, List};
-use serde;
 use std::fmt;
-use URI;
+
+use serde;
+
+use crate::URI;
+
+use super::{Dict, List};
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 pub enum Reason {
@@ -49,9 +52,9 @@ impl CallError {
     #[inline]
     pub fn new(reason: Reason, args: Option<List>, kwargs: Option<Dict>) -> CallError {
         CallError {
-            reason: reason,
-            args: args,
-            kwargs: kwargs,
+            reason,
+            args,
+            kwargs,
         }
     }
 
@@ -107,7 +110,7 @@ impl Reason {
 }
 
 impl fmt::Display for Reason {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.get_string())
     }
 }
@@ -137,7 +140,7 @@ impl<'de> serde::Deserialize<'de> for Reason {
 impl<'de> serde::de::Visitor<'de> for ReasonVisitor {
     type Value = Reason;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("error reason uri")
     }
 
@@ -205,7 +208,7 @@ impl<'de> serde::Deserialize<'de> for ErrorType {
 impl<'de> serde::de::Visitor<'de> for ErrorTypeVisitor {
     type Value = ErrorType;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("Integer representing an error type")
     }
 

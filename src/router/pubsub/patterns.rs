@@ -1,14 +1,17 @@
 //! Contains the `SubscriptionPatternNode` struct, which is used for constructing a trie corresponding
 //! to pattern based subscription
-use super::super::{random_id, ConnectionInfo};
-use itertools::Itertools;
-use messages::Reason;
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use std::slice::Iter;
 use std::sync::{Arc, Mutex};
-use {MatchingPolicy, ID, URI};
+
+use itertools::Itertools;
+
+use crate::messages::Reason;
+use crate::{MatchingPolicy, ID, URI};
+
+use super::super::{random_id, ConnectionInfo};
 
 /// Contains a trie corresponding to the subscription patterns that connections have requested.
 ///
@@ -17,7 +20,6 @@ use {MatchingPolicy, ID, URI};
 /// Subscriptions can be added and removed, and the connections that match a particular URI
 /// can be found using the `get_registrant_for()` method.
 ///
-
 pub struct SubscriptionPatternNode<P: PatternData> {
     edges: HashMap<String, SubscriptionPatternNode<P>>,
     connections: Vec<DataWrapper<P>>,
@@ -40,7 +42,6 @@ struct DataWrapper<P: PatternData> {
 pub struct MatchIterator<'a, P>
 where
     P: PatternData,
-    P: 'a,
 {
     uri: Vec<String>,
     current: Box<StackFrame<'a, P>>,
@@ -49,7 +50,6 @@ where
 struct StackFrame<'a, P>
 where
     P: PatternData,
-    P: 'a,
 {
     node: &'a SubscriptionPatternNode<P>,
     state: IterState<'a, P>,
@@ -67,7 +67,6 @@ pub struct PatternError {
 enum IterState<'a, P: PatternData>
 where
     P: PatternData,
-    P: 'a,
 {
     None,
     Wildcard,
@@ -81,7 +80,7 @@ where
 impl PatternError {
     #[inline]
     pub fn new(reason: Reason) -> PatternError {
-        PatternError { reason: reason }
+        PatternError { reason }
     }
 
     pub fn reason(self) -> Reason {
@@ -96,7 +95,7 @@ impl PatternData for Arc<Mutex<ConnectionInfo>> {
 }
 
 impl<'a, P: PatternData> Debug for IterState<'a, P> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -114,14 +113,14 @@ impl<'a, P: PatternData> Debug for IterState<'a, P> {
 }
 
 impl<P: PatternData> Debug for SubscriptionPatternNode<P> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.fmt_with_indent(f, 0)
     }
 }
 
 impl<P: PatternData> SubscriptionPatternNode<P> {
-    fn fmt_with_indent(&self, f: &mut Formatter, indent: usize) -> fmt::Result {
-        try!(writeln!(
+    fn fmt_with_indent(&self, f: &mut Formatter<'_>, indent: usize) -> fmt::Result {
+        writeln!(
             f,
             "{} pre: {:?} subs: {:?}",
             self.id,
@@ -133,13 +132,13 @@ impl<P: PatternData> SubscriptionPatternNode<P> {
                 .iter()
                 .map(|sub| sub.subscriber.get_id())
                 .join(","),
-        ));
+        )?;
         for (chunk, node) in &self.edges {
             for _ in 0..indent * 2 {
-                try!(write!(f, "  "));
+                write!(f, "  ")?;
             }
-            try!(write!(f, "{} - ", chunk));
-            try!(node.fmt_with_indent(f, indent + 1));
+            write!(f, "{} - ", chunk)?;
+            node.fmt_with_indent(f, indent + 1)?;
         }
         Ok(())
     }
@@ -156,7 +155,8 @@ impl<P: PatternData> SubscriptionPatternNode<P> {
             Some(initial) => initial,
             None => return Err(PatternError::new(Reason::InvalidURI)),
         };
-        let edge = self.edges
+        let edge = self
+            .edges
             .entry(initial.to_string())
             .or_insert_with(SubscriptionPatternNode::new);
         edge.add_subscription(uri_bits, subscriber, matching_policy)
@@ -199,7 +199,8 @@ impl<P: PatternData> SubscriptionPatternNode<P> {
                 if uri_bit.is_empty() && matching_policy != MatchingPolicy::Wildcard {
                     return Err(PatternError::new(Reason::InvalidURI));
                 }
-                let edge = self.edges
+                let edge = self
+                    .edges
                     .entry(uri_bit.to_string())
                     .or_insert_with(SubscriptionPatternNode::new);
                 edge.add_subscription(uri_bits, subscriber, matching_policy)
@@ -207,13 +208,13 @@ impl<P: PatternData> SubscriptionPatternNode<P> {
             None => {
                 if matching_policy == MatchingPolicy::Prefix {
                     self.prefix_connections.push(DataWrapper {
-                        subscriber: subscriber,
+                        subscriber,
                         policy: matching_policy,
                     });
                     Ok(self.prefix_id)
                 } else {
                     self.connections.push(DataWrapper {
-                        subscriber: subscriber,
+                        subscriber,
                         policy: matching_policy,
                     });
                     Ok(self.id)
@@ -237,7 +238,7 @@ impl<P: PatternData> SubscriptionPatternNode<P> {
                 if let Some(edge) = self.edges.get_mut(uri_bit) {
                     edge.remove_subscription(uri_bits, subscriber_id, is_prefix)
                 } else {
-                    return Err(PatternError::new(Reason::InvalidURI));
+                    Err(PatternError::new(Reason::InvalidURI))
                 }
             }
             None => {
@@ -259,7 +260,7 @@ impl<P: PatternData> SubscriptionPatternNode<P> {
     ///
     /// This iterator returns a triple with the connection info, the id of the subscription and
     /// the matching policy used when the subscription was created.
-    pub fn filter(&self, topic: URI) -> MatchIterator<P> {
+    pub fn filter(&self, topic: URI) -> MatchIterator<'_, P> {
         MatchIterator {
             current: Box::new(StackFrame {
                 node: self,
@@ -380,7 +381,7 @@ impl<'a, P: PatternData> Iterator for MatchIterator<'a, P> {
 #[cfg(test)]
 mod test {
     use super::{PatternData, SubscriptionPatternNode};
-    use {MatchingPolicy, ID, URI};
+    use crate::{MatchingPolicy, ID, URI};
 
     #[derive(Clone)]
     struct MockData {
@@ -394,7 +395,7 @@ mod test {
     }
     impl MockData {
         pub fn new(id: ID) -> MockData {
-            MockData { id: id }
+            MockData { id }
         }
     }
 
@@ -411,22 +412,26 @@ mod test {
                 &URI::new("com.example.test..topic"),
                 connection1,
                 MatchingPolicy::Wildcard,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.subscribe_with(
                 &URI::new("com.example.test.specific.topic"),
                 connection2,
                 MatchingPolicy::Strict,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.subscribe_with(
                 &URI::new("com.example"),
                 connection3,
                 MatchingPolicy::Prefix,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.subscribe_with(
                 &URI::new("com.example.test"),
                 connection4,
                 MatchingPolicy::Prefix,
-            ).unwrap(),
+            )
+            .unwrap(),
         ];
 
         assert_eq!(
@@ -450,22 +455,26 @@ mod test {
                 &URI::new("com.example.test..topic"),
                 connection1.clone(),
                 MatchingPolicy::Wildcard,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.subscribe_with(
                 &URI::new("com.example.test.specific.topic"),
                 connection2,
                 MatchingPolicy::Strict,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.subscribe_with(
                 &URI::new("com.example"),
                 connection3,
                 MatchingPolicy::Prefix,
-            ).unwrap(),
+            )
+            .unwrap(),
             root.subscribe_with(
                 &URI::new("com.example.test"),
                 connection4.clone(),
                 MatchingPolicy::Prefix,
-            ).unwrap(),
+            )
+            .unwrap(),
         ];
 
         root.unsubscribe_with("com.example.test..topic", &connection1, false)
