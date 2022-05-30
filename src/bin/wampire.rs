@@ -1,5 +1,4 @@
 use argparse::{ArgumentParser, Store, StoreTrue};
-use env_logger;
 
 use wampire::router::Router;
 

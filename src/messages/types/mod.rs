@@ -1,24 +1,23 @@
 use std::fmt;
 
-use serde;
-
 mod error;
+pub use self::error::*;
+
 mod options;
+pub use self::options::*;
+
 mod roles;
+pub use self::roles::*;
+
 mod value;
-pub use error::*;
-pub use options::*;
-pub use roles::*;
-pub use value::*;
+pub use self::value::*;
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
 fn is_not(b: &bool) -> bool {
     !*b
 }
 
-/**************************
-         Structs
-**************************/
+//  Structs
 
 /// The policies that can be used for matching a uri pattern.
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -46,9 +45,7 @@ pub enum InvocationPolicy {
     Last,
 }
 
-/**************************
-        Visitors
-**************************/
+// Visitors
 
 struct MatchingPolicyVisitor;
 struct InvocationPolicyVisitor;
@@ -83,9 +80,7 @@ impl Default for InvocationPolicy {
     }
 }
 
-/*-------------------------
-       MatchingPolicy
--------------------------*/
+// MatchingPolicy
 
 impl serde::Serialize for MatchingPolicy {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

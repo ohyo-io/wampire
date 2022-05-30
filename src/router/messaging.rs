@@ -1,20 +1,22 @@
-use std::collections::HashMap;
-use std::io::Cursor;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    io::Cursor,
+    sync::{Arc, Mutex},
+};
 
 use log::{debug, error, info, trace};
-use rmp_serde::Deserializer as RMPDeserializer;
-use rmp_serde::Serializer;
+use rmp_serde::{Deserializer as RMPDeserializer, Serializer};
 use serde::{Deserialize, Serialize};
-use serde_json;
+
 use ws::{
     CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler, Message as WSMessage, Request,
     Response, Result as WSResult, Sender,
 };
 
-use crate::messages::{ErrorDetails, ErrorType, Message, Reason};
-use crate::utils::StructMapWriter;
-use crate::{Dict, Error, ErrorKind, List, WampResult, ID};
+use crate::{
+    messages::{ErrorDetails, ErrorType, Message, Reason},
+    Dict, Error, ErrorKind, List, WampResult, ID,
+};
 
 use super::{ConnectionHandler, ConnectionInfo, ConnectionState, WAMP_JSON};
 
@@ -42,7 +44,7 @@ fn send_message_msgpack(sender: &Sender, message: &Message) -> WSResult<()> {
     // Send the message
     let mut buf: Vec<u8> = Vec::new();
     message
-        .serialize(&mut Serializer::with(&mut buf, StructMapWriter))
+        .serialize(&mut Serializer::new(&mut buf).with_struct_map())
         .unwrap();
     sender.send(WSMessage::Binary(buf))
 }
@@ -163,7 +165,6 @@ impl ConnectionHandler {
     }
 
     fn on_message_error(&mut self, error: Error) -> WSResult<()> {
-        use std::error::Error as StdError;
         match error.get_kind() {
             ErrorKind::WSError(e) => Err(e),
             ErrorKind::URLError(_) => unimplemented!(),
@@ -186,7 +187,7 @@ impl ConnectionHandler {
                 self.terminate_connection()
             }
             ErrorKind::MsgPackError(e) => {
-                error!("Could not parse MsgPack: {}", e.description());
+                error!("Could not parse MsgPack: {}", e);
                 self.terminate_connection()
             }
             ErrorKind::MalformedData => unimplemented!(),

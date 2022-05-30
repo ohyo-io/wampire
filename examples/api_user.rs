@@ -1,11 +1,14 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 use std::io;
 
 use log::info;
-use env_logger;
-use eventual::Async;
 
-use wampire::client::{Client, Connection};
-use wampire::{ArgList, Value, URI};
+use wampire::{
+    client::{Client, Connection},
+    ArgList, Value, URI,
+};
 
 enum Command {
     Add,
@@ -22,16 +25,19 @@ fn print_prompt() {
 
 fn get_input_from_user() -> String {
     let mut input = String::new();
+
     io::stdin().read_line(&mut input).unwrap();
     input
 }
 
 fn process_input(input: &str) -> (Command, Vec<String>) {
-    let mut i_iter = input.splitn(2, ' ');
-    let command = match i_iter.next() {
+    let mut input_iter = input.splitn(2, ' ');
+
+    let command = match input_iter.next() {
         Some(command) => command.trim().to_lowercase(),
         None => return (Command::NoOp, Vec::new()),
     };
+
     let command = match command.as_str() {
         "add" => Command::Add,
         "echo" => Command::Echo,
@@ -40,18 +46,20 @@ fn process_input(input: &str) -> (Command, Vec<String>) {
         "" => Command::NoOp,
         x => Command::Invalid(x.to_string()),
     };
-    let args = match i_iter.next() {
+
+    let args = match input_iter.next() {
         Some(args_string) => args_string
             .split(',')
-            .map(|s| s.trim().to_string())
+            .map(|arg| arg.trim().to_string())
             .collect(),
         None => Vec::new(),
     };
+
     (command, args)
 }
 
 #[allow(clippy::comparison_chain)]
-fn add(client: &mut Client, args: &[String]) {
+async fn add(client: &mut Client, args: &[String]) {
     if args.len() > 2 {
         println!("Too many arguments to add.  Ignoring");
     } else if args.len() < 2 {
@@ -60,48 +68,43 @@ fn add(client: &mut Client, args: &[String]) {
     }
 
     let a = match str::parse::<i64>(&args[0]) {
-        Ok(i) => i,
+        Ok(value) => value,
         Err(_) => {
             println!("Please enter an integer (got {})", args[0]);
             return;
         }
     };
+
     let b = match str::parse::<i64>(&args[1]) {
-        Ok(i) => i,
+        Ok(value) => value,
         Err(_) => {
             println!("Please enter an integer (got {})", args[0]);
             return;
         }
     };
+
     match client
         .call(
             URI::new("ca.test.add"),
             Some(vec![Value::Integer(a), Value::Integer(b)]),
             None,
         )
-        .unwrap()
-        .r#await()
+        .await
     {
         Ok((args, _)) => {
             println!("Result: {}", args.get_int(0).unwrap().unwrap());
         }
-        Err(e) => match e.take() {
-            Some(e) => {
-                println!("Error: {:?}", e);
-            }
-            None => {
-                println!("Aborted");
-            }
-        },
+        Err(err) => {
+            println!("Error: {:?}", err);
+        }
     }
 }
 
-fn echo(client: &mut Client, args: Vec<String>) {
+async fn echo(client: &mut Client, args: Vec<String>) {
     let args = args.into_iter().map(Value::String).collect();
     let result = client
         .call(URI::new("ca.test.echo"), Some(args), None)
-        .unwrap()
-        .r#await();
+        .await;
     println!("Result: {:?}", result);
 }
 
@@ -116,29 +119,36 @@ fn help() {
     println!("       Sends a goodbye message and quits the program");
 }
 
-fn event_loop(mut client: Client) {
+async fn event_loop(mut client: Client) {
     loop {
         print_prompt();
         let input = get_input_from_user();
         let (command, args) = process_input(&input);
         match command {
-            Command::Add => add(&mut client, &args),
-            Command::Echo => echo(&mut client, args),
+            Command::Add => {
+                add(&mut client, &args).await;
+            }
+            Command::Echo => {
+                echo(&mut client, args).await;
+            }
             Command::Help => help(),
             Command::Quit => break,
             Command::NoOp => {}
             Command::Invalid(bad_command) => print!("Invalid command: {}", bad_command),
         }
     }
-    client.shutdown().unwrap().r#await().unwrap();
+    client.shutdown().await.unwrap();
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
+
     let connection = Connection::new("ws://127.0.0.1:8080/ws", "demo");
+
     info!("Connecting");
     let client = connection.connect().unwrap();
 
     info!("Connected");
-    event_loop(client);
+    event_loop(client).await;
 }

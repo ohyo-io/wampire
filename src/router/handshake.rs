@@ -5,11 +5,11 @@ use ws::{
     CloseCode, Error as WSError, ErrorKind as WSErrorKind, Request, Response, Result as WSResult,
 };
 
-use crate::messages::{
-    ErrorDetails, HelloDetails, Message, Reason, RouterRoles, WelcomeDetails, URI,
+use crate::{
+    messages::{ErrorDetails, HelloDetails, Message, Reason, RouterRoles, WelcomeDetails, URI},
+    router::messaging::send_message,
+    Error, ErrorKind, WampResult,
 };
-use crate::router::messaging::send_message;
-use crate::{Error, ErrorKind, WampResult};
 
 use super::{ConnectionHandler, ConnectionState, WAMP_JSON, WAMP_MSGPACK};
 

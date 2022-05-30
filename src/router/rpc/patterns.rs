@@ -1,16 +1,16 @@
 //! Contains the `RegistrationPatternNode` struct, which is used for constructing a trie corresponding
 //! to pattern based registration
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
-use std::sync::{Arc, Mutex};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+    sync::{Arc, Mutex},
+};
 
 use itertools::Itertools;
-use rand::thread_rng;
-use rand::Rng;
+use rand::{seq::SliceRandom, thread_rng};
 
-use crate::messages::Reason;
-use crate::{InvocationPolicy, MatchingPolicy, ID, URI};
+use crate::{messages::Reason, InvocationPolicy, MatchingPolicy, ID, URI};
 
 use super::super::{random_id, ConnectionInfo};
 
@@ -110,7 +110,7 @@ impl<P: PatternData> ProcdureCollection<P> {
         match self.invocation_policy {
             InvocationPolicy::Single | InvocationPolicy::First => self.procedures.first(),
             InvocationPolicy::Last => self.procedures.last(),
-            InvocationPolicy::Random => thread_rng().choose(&self.procedures),
+            InvocationPolicy::Random => self.procedures.choose(&mut thread_rng()),
             InvocationPolicy::RoundRobin => {
                 let mut counter = self.round_robin_counter.borrow_mut();
                 if *counter >= self.procedures.len() {

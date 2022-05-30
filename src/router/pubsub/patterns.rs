@@ -1,15 +1,16 @@
 //! Contains the `SubscriptionPatternNode` struct, which is used for constructing a trie corresponding
 //! to pattern based subscription
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
-use std::mem;
-use std::slice::Iter;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+    mem,
+    slice::Iter,
+    sync::{Arc, Mutex},
+};
 
 use itertools::Itertools;
 
-use crate::messages::Reason;
-use crate::{MatchingPolicy, ID, URI};
+use crate::{messages::Reason, MatchingPolicy, ID, URI};
 
 use super::super::{random_id, ConnectionInfo};
 
@@ -342,7 +343,7 @@ impl<'a, P: PatternData> MatchIterator<'a, P> {
                     return None;
                 } else {
                     let parent = self.current.parent.take();
-                    mem::replace(&mut self.current, parent.unwrap());
+                    let _ = mem::replace(&mut self.current, parent.unwrap());
                 }
             }
         };

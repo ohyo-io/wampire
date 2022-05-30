@@ -1,37 +1,40 @@
-use std::collections::HashMap;
-use std::fmt;
-use std::io::Cursor;
-use std::sync::mpsc::{channel, Sender as CHSender};
-use std::sync::{Arc, Mutex, MutexGuard};
-use std::thread;
-use std::time::Duration;
+#![allow(dead_code)]
+#![allow(unused_imports)]
+use std::{
+    collections::HashMap,
+    fmt,
+    io::Cursor,
+    pin::Pin,
+    sync::{
+        mpsc::{channel, Sender as CHSender},
+        Arc, Mutex, MutexGuard,
+    },
+    thread,
+};
 
-use eventual::{Complete, Future};
+use futures::{channel::oneshot, Future};
+use intmap::IntMap;
 use log::{debug, error, info, trace, warn};
-use rmp_serde::Deserializer as RMPDeserializer;
-use rmp_serde::Serializer;
+use rmp_serde::{Deserializer as RMPDeserializer, Serializer};
 use serde::{Deserialize, Serialize};
-use serde_json;
 use url::Url;
-use ws::util::Token;
 use ws::{
-    connect, CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler, Handshake,
-    Message as WSMessage, Request, Result as WSResult, Sender,
+    connect, util::Token, CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler,
+    Handshake, Message as WSMessage, Request, Result as WSResult, Sender,
 };
 
-use crate::messages::{
-    CallOptions, ClientRoles, Dict, ErrorDetails, ErrorType, HelloDetails, InvocationDetails, List,
-    MatchingPolicy, Message, PublishOptions, Reason, RegisterOptions, ResultDetails,
-    SubscribeOptions, WelcomeDetails, YieldOptions, URI,
+use crate::{
+    messages::{
+        CallOptions, ClientRoles, Dict, ErrorDetails, ErrorType, HelloDetails, InvocationDetails,
+        List, MatchingPolicy, Message, PublishOptions, Reason, RegisterOptions, ResultDetails,
+        SubscribeOptions, WelcomeDetails, YieldOptions, URI,
+    },
+    CallError, CallResult, Error, ErrorKind, WampResult, ID,
 };
-use crate::utils::StructMapWriter;
-use crate::{CallError, CallResult, Error, ErrorKind, WampResult, ID};
 
 const CONNECTION_TIMEOUT: Token = Token(124);
 
 pub struct Connection {
-    // sender: Sender,
-    // receiver: client::Receiver<stream::WebSocketStream>,
     realm: URI,
     url: String,
 }
@@ -53,6 +56,8 @@ struct SubscriptionCallbackWrapper {
 struct RegistrationCallbackWrapper {
     callback: Callback,
 }
+
+type Complete<T> = oneshot::Sender<Result<T, CallError>>;
 
 pub type Callback = Box<dyn FnMut(List, Dict) -> CallResult<(Option<List>, Option<Dict>)>>;
 
@@ -95,30 +100,16 @@ pub struct ConnectionHandler {
 struct ConnectionInfo {
     connection_state: ConnectionState,
     sender: Sender,
-    subscription_requests: HashMap<
-        ID,
-        (
-            Complete<Subscription, CallError>,
-            SubscriptionCallbackWrapper,
-            URI,
-        ),
-    >,
-    unsubscription_requests: HashMap<ID, (Complete<(), CallError>, ID)>,
-    subscriptions: HashMap<ID, SubscriptionCallbackWrapper>,
-    registrations: HashMap<ID, RegistrationCallbackWrapper>,
-    call_requests: HashMap<ID, Complete<(List, Dict), CallError>>,
-    registration_requests: HashMap<
-        ID,
-        (
-            Complete<Registration, CallError>,
-            RegistrationCallbackWrapper,
-            URI,
-        ),
-    >,
-    unregistration_requests: HashMap<ID, (Complete<(), CallError>, ID)>,
+    subscription_requests: IntMap<(Complete<Subscription>, SubscriptionCallbackWrapper, URI)>,
+    unsubscription_requests: IntMap<(Complete<()>, ID)>,
+    subscriptions: IntMap<SubscriptionCallbackWrapper>,
+    registrations: IntMap<RegistrationCallbackWrapper>,
+    call_requests: IntMap<Complete<(List, Dict)>>,
+    registration_requests: IntMap<(Complete<Registration>, RegistrationCallbackWrapper, URI)>,
+    unregistration_requests: IntMap<(Complete<()>, ID)>,
     protocol: String,
-    publish_requests: HashMap<ID, Complete<ID, CallError>>,
-    shutdown_complete: Option<Complete<(), CallError>>,
+    publish_requests: IntMap<Complete<ID>>,
+    shutdown_complete: Option<Complete<()>>,
     session_id: ID,
 }
 
@@ -130,29 +121,24 @@ impl MessageSender for ConnectionInfo {
     fn send_message(&self, message: Message) -> WampResult<()> {
         debug!("Sending message {:?} via {}", message, self.protocol);
         let send_result = if self.protocol == WAMP_JSON {
-            send_message_json(&self.sender, &message)
+            // Send the json message
+            self.sender
+                .send(WSMessage::Text(serde_json::to_string(&message).unwrap()))
         } else {
-            send_message_msgpack(&self.sender, &message)
+            // Send the msgpack
+            let mut buf: Vec<u8> = Vec::new();
+
+            message
+                .serialize(&mut Serializer::new(&mut buf).with_struct_map())
+                .unwrap();
+
+            self.sender.send(WSMessage::Binary(buf))
         };
         match send_result {
             Ok(()) => Ok(()),
             Err(e) => Err(Error::new(ErrorKind::WSError(e))),
         }
     }
-}
-
-fn send_message_json(sender: &Sender, message: &Message) -> WSResult<()> {
-    // Send the message
-    sender.send(WSMessage::Text(serde_json::to_string(message).unwrap()))
-}
-
-fn send_message_msgpack(sender: &Sender, message: &Message) -> WSResult<()> {
-    // Send the message
-    let mut buf: Vec<u8> = Vec::new();
-    message
-        .serialize(&mut Serializer::with(&mut buf, StructMapWriter))
-        .unwrap();
-    sender.send(WSMessage::Binary(buf))
 }
 
 impl Connection {
@@ -175,16 +161,16 @@ impl Connection {
                 out.timeout(5000, CONNECTION_TIMEOUT).unwrap();
                 let info = Arc::new(Mutex::new(ConnectionInfo {
                     protocol: String::new(),
-                    subscription_requests: HashMap::new(),
-                    unsubscription_requests: HashMap::new(),
-                    subscriptions: HashMap::new(),
-                    registrations: HashMap::new(),
-                    call_requests: HashMap::new(),
-                    registration_requests: HashMap::new(),
-                    unregistration_requests: HashMap::new(),
+                    subscription_requests: IntMap::new(),
+                    unsubscription_requests: IntMap::new(),
+                    subscriptions: IntMap::new(),
+                    registrations: IntMap::new(),
+                    call_requests: IntMap::new(),
+                    registration_requests: IntMap::new(),
+                    unregistration_requests: IntMap::new(),
                     sender: out,
                     connection_state: ConnectionState::Connecting,
-                    publish_requests: HashMap::new(),
+                    publish_requests: IntMap::new(),
                     shutdown_complete: None,
                     session_id: 0,
                 }));
@@ -215,9 +201,9 @@ impl Connection {
 macro_rules! cancel_future_tuple {
     ($dict:expr) => {{
         for (_, future) in $dict.drain() {
-            future
+            let _ = future
                 .0
-                .fail(CallError::new(Reason::NetworkFailure, None, None));
+                .send(Err(CallError::new(Reason::NetworkFailure, None, None)));
         }
     }};
 }
@@ -225,7 +211,7 @@ macro_rules! cancel_future_tuple {
 macro_rules! cancel_future {
     ($dict:expr) => {{
         for (_, future) in $dict.drain() {
-            future.fail(CallError::new(Reason::NetworkFailure, None, None));
+            let _ = future.send(Err(CallError::new(Reason::NetworkFailure, None, None)));
         }
     }};
 }
@@ -244,8 +230,8 @@ impl Handler for ConnectionHandler {
 
         let hello_message =
             Message::Hello(self.realm.clone(), HelloDetails::new(ClientRoles::new()));
+
         debug!("Sending Hello message");
-        thread::sleep(Duration::from_millis(200));
         match info.send_message(hello_message) {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -303,7 +289,7 @@ impl Handler for ConnectionHandler {
         info.sender.shutdown().ok();
 
         if let Some(promise) = info.shutdown_complete.take() {
-            promise.complete(());
+            let _ = promise.send(Ok(()));
         }
     }
 
@@ -392,7 +378,7 @@ impl ConnectionHandler {
                     // The router has seen our goodbye message and has responded in kind
                     info!("Router acknowledged disconnect");
                     if let Some(promise) = info.shutdown_complete.take() {
-                        promise.complete(())
+                        let _ = promise.send(Ok(()));
                     }
                     return false;
                 } else {
@@ -419,7 +405,7 @@ impl ConnectionHandler {
     ) {
         // TODO handle errors here
         info!("Received a subscribed notification");
-        match info.subscription_requests.remove(&request_id) {
+        match info.subscription_requests.remove(request_id) {
             Some((promise, callback, topic)) => {
                 debug!("Completing promise");
                 let subscription = Subscription {
@@ -428,7 +414,7 @@ impl ConnectionHandler {
                 };
                 info.subscriptions.insert(subscription_id, callback);
                 drop(info);
-                promise.complete(subscription)
+                let _ = promise.send(Ok(subscription));
             }
             None => {
                 warn!(
@@ -448,10 +434,10 @@ impl ConnectionHandler {
         kwargs: Option<Dict>,
     ) {
         warn!("Received an error for a subscription");
-        match info.subscription_requests.remove(&request_id) {
+        match info.subscription_requests.remove(request_id) {
             Some((promise, _, _)) => {
                 drop(info);
-                promise.fail(CallError::new(reason, args, kwargs));
+                let _ = promise.send(Err(CallError::new(reason, args, kwargs)));
             }
             None => {
                 warn!(
@@ -463,11 +449,11 @@ impl ConnectionHandler {
     }
 
     fn handle_unsubscribed(&self, mut info: MutexGuard<'_, ConnectionInfo>, request_id: ID) {
-        match info.unsubscription_requests.remove(&request_id) {
+        match info.unsubscription_requests.remove(request_id) {
             Some((promise, subscription_id)) => {
-                info.unsubscription_requests.remove(&subscription_id);
+                info.unsubscription_requests.remove(subscription_id);
                 drop(info);
-                promise.complete(())
+                let _ = promise.send(Ok(()));
             }
             None => {
                 warn!("Received a unsubscribed notification for a subscription we don't have.  ID: {}", request_id);
@@ -483,11 +469,11 @@ impl ConnectionHandler {
         args: Option<List>,
         kwargs: Option<Dict>,
     ) {
-        match info.unsubscription_requests.remove(&request_id) {
+        match info.unsubscription_requests.remove(request_id) {
             Some((promise, subscription_id)) => {
-                info.unsubscription_requests.remove(&subscription_id);
+                info.unsubscription_requests.remove(subscription_id);
                 drop(info);
-                promise.fail(CallError::new(reason, args, kwargs))
+                let _ = promise.send(Err(CallError::new(reason, args, kwargs)));
             }
             None => {
                 warn!(
@@ -506,7 +492,7 @@ impl ConnectionHandler {
     ) {
         // TODO handle errors here
         info!("Received a registered notification");
-        match info.registration_requests.remove(&request_id) {
+        match info.registration_requests.remove(request_id) {
             Some((promise, callback, procedure)) => {
                 info.registrations.insert(registration_id, callback);
                 drop(info);
@@ -514,7 +500,7 @@ impl ConnectionHandler {
                     procedure,
                     registration_id,
                 };
-                promise.complete(registration)
+                let _ = promise.send(Ok(registration));
             }
             None => {
                 warn!(
@@ -534,10 +520,10 @@ impl ConnectionHandler {
         kwargs: Option<Dict>,
     ) {
         info!("Received a registration error");
-        match info.registration_requests.remove(&request_id) {
+        match info.registration_requests.remove(request_id) {
             Some((promise, _, _)) => {
                 drop(info);
-                promise.fail(CallError::new(reason, args, kwargs))
+                let _ = promise.send(Err(CallError::new(reason, args, kwargs)));
             }
             None => {
                 warn!(
@@ -549,11 +535,11 @@ impl ConnectionHandler {
     }
 
     fn handle_unregistered(&self, mut info: MutexGuard<'_, ConnectionInfo>, request_id: ID) {
-        match info.unregistration_requests.remove(&request_id) {
+        match info.unregistration_requests.remove(request_id) {
             Some((promise, registration_id)) => {
-                info.registrations.remove(&registration_id);
+                info.registrations.remove(registration_id);
                 drop(info);
-                promise.complete(())
+                let _ = promise.send(Ok(()));
             }
             None => {
                 warn!("Received a unregistered notification for a registration we don't have.  ID: {}", request_id);
@@ -569,10 +555,10 @@ impl ConnectionHandler {
         args: Option<List>,
         kwargs: Option<Dict>,
     ) {
-        match info.unregistration_requests.remove(&request_id) {
+        match info.unregistration_requests.remove(request_id) {
             Some((promise, _)) => {
                 drop(info);
-                promise.fail(CallError::new(reason, args, kwargs))
+                let _ = promise.send(Err(CallError::new(reason, args, kwargs)));
             }
             None => {
                 warn!(
@@ -589,9 +575,9 @@ impl ConnectionHandler {
         request_id: ID,
         publication_id: ID,
     ) {
-        match info.publish_requests.remove(&request_id) {
+        match info.publish_requests.remove(request_id) {
             Some(promise) => {
-                promise.complete(publication_id);
+                let _ = promise.send(Ok(publication_id));
             }
             None => warn!(
                 "Received published notification for a request we weren't tracking: {}",
@@ -607,8 +593,10 @@ impl ConnectionHandler {
         args: Option<List>,
         kwargs: Option<Dict>,
     ) {
-        match info.publish_requests.remove(&request_id) {
-            Some(promise) => promise.fail(CallError::new(reason, args, kwargs)),
+        match info.publish_requests.remove(request_id) {
+            Some(promise) => {
+                let _ = promise.send(Err(CallError::new(reason, args, kwargs)));
+            }
             None => warn!("Received published error for a publication: {}", request_id),
         }
     }
@@ -641,7 +629,7 @@ impl ConnectionHandler {
     ) {
         let args = args.unwrap_or_default();
         let kwargs = kwargs.unwrap_or_default();
-        match info.subscriptions.get_mut(&subscription_id) {
+        match info.subscriptions.get_mut(subscription_id) {
             Some(subscription) => {
                 let callback = &mut subscription.callback;
                 callback(args, kwargs);
@@ -666,7 +654,7 @@ impl ConnectionHandler {
     ) {
         let args = args.unwrap_or_default();
         let kwargs = kwargs.unwrap_or_default();
-        let message = match info.registrations.get_mut(&registration_id) {
+        let message = match info.registrations.get_mut(registration_id) {
             Some(registration) => {
                 let callback = &mut registration.callback;
                 match callback(args, kwargs) {
@@ -707,9 +695,9 @@ impl ConnectionHandler {
     ) {
         let args = args.unwrap_or_default();
         let kwargs = kwargs.unwrap_or_default();
-        match info.call_requests.remove(&call_id) {
+        match info.call_requests.remove(call_id) {
             Some(promise) => {
-                promise.complete((args, kwargs));
+                let _ = promise.send(Ok((args, kwargs)));
             }
             None => {
                 warn!(
@@ -728,8 +716,10 @@ impl ConnectionHandler {
         args: Option<List>,
         kwargs: Option<Dict>,
     ) {
-        match info.call_requests.remove(&request_id) {
-            Some(promise) => promise.fail(CallError::new(reason, args, kwargs)),
+        match info.call_requests.remove(request_id) {
+            Some(promise) => {
+                let _ = promise.send(Err(CallError::new(reason, args, kwargs)));
+            }
             None => {
                 warn!(
                     "Received an error for a call we didn't make.  ID: {}",
@@ -761,25 +751,21 @@ impl ConnectionHandler {
         match e_type {
             ErrorType::Subscribe => {
                 self.handle_subscribe_error(info, request_id, reason, args, kwargs)
-            },
+            }
             ErrorType::Unsubscribe => {
                 self.handle_unsubscribe_error(info, request_id, reason, args, kwargs)
-            },
-            ErrorType::Publish => {
-                self.handle_publish_error(info, request_id, reason, args, kwargs)
-            },
+            }
+            ErrorType::Publish => self.handle_publish_error(info, request_id, reason, args, kwargs),
             ErrorType::Register => {
                 self.handle_register_error(info, request_id, reason, args, kwargs)
-            },
+            }
             ErrorType::Unregister => {
                 self.handle_unregister_error(info, request_id, reason, args, kwargs)
-            },
+            }
             ErrorType::Invocation => {
                 warn!("Received an error for an invocation message, which we did not (and could not) send")
-            },
-            ErrorType::Call => {
-                self.handle_call_error(info, request_id, reason, args, kwargs)
             }
+            ErrorType::Call => self.handle_call_error(info, request_id, reason, args, kwargs),
         }
     }
 }
@@ -790,91 +776,147 @@ impl Client {
         self.max_session_id
     }
 
+    /// Send a subscribe messages
     pub fn subscribe_with_pattern(
         &mut self,
         topic_pattern: URI,
         callback: Box<dyn FnMut(List, Dict)>,
         policy: MatchingPolicy,
-    ) -> WampResult<Future<Subscription, CallError>> {
-        // Send a subscribe messages
+    ) -> Pin<Box<dyn Future<Output = Result<Subscription, CallError>>>> {
         let request_id = self.get_next_session_id();
-        let (complete, future) = Future::<Subscription, CallError>::pair();
+
+        let (complete, receiver) = oneshot::channel();
+
         let callback = SubscriptionCallbackWrapper { callback };
         let mut options = SubscribeOptions::new();
+
         if policy != MatchingPolicy::Strict {
             options.pattern_match = policy
         }
+
         let mut info = self.connection_info.lock().unwrap();
         info.subscription_requests
             .insert(request_id, (complete, callback, topic_pattern.clone()));
-        info.send_message(Message::Subscribe(request_id, options, topic_pattern))?;
-        Ok(future)
+
+        info.send_message(Message::Subscribe(request_id, options, topic_pattern))
+            .unwrap();
+
+        Box::pin(async {
+            receiver.await.unwrap_or(Err(CallError {
+                reason: Reason::InternalError,
+                args: None,
+                kwargs: None,
+            }))
+        })
     }
 
     pub fn subscribe(
         &mut self,
         topic: URI,
         callback: Box<dyn FnMut(List, Dict)>,
-    ) -> WampResult<Future<Subscription, CallError>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Subscription, CallError>>>> {
         self.subscribe_with_pattern(topic, callback, MatchingPolicy::Strict)
     }
 
+    /// Send a register message
     pub fn register_with_pattern(
         &mut self,
         procedure_pattern: URI,
         callback: Callback,
         policy: MatchingPolicy,
-    ) -> WampResult<Future<Registration, CallError>> {
-        // Send a register message
+    ) -> Pin<Box<dyn Future<Output = Result<Registration, CallError>>>> {
         let request_id = self.get_next_session_id();
-        let (complete, future) = Future::<Registration, CallError>::pair();
+
+        let (complete, receiver) = oneshot::channel();
+
         let callback = RegistrationCallbackWrapper { callback };
         let mut options = RegisterOptions::new();
+
         if policy != MatchingPolicy::Strict {
             options.pattern_match = policy
         }
+
         debug!("Acquiring lock on connection info");
         let mut info = self.connection_info.lock().unwrap();
+
         debug!("Lock on connection info acquired");
         info.registration_requests
             .insert(request_id, (complete, callback, procedure_pattern.clone()));
-        info.send_message(Message::Register(request_id, options, procedure_pattern))?;
-        Ok(future)
+
+        info.send_message(Message::Register(request_id, options, procedure_pattern))
+            .unwrap();
+
+        Box::pin(async {
+            receiver.await.unwrap_or(Err(CallError {
+                reason: Reason::InternalError,
+                args: None,
+                kwargs: None,
+            }))
+        })
     }
 
     pub fn register(
         &mut self,
         procedure: URI,
         callback: Callback,
-    ) -> WampResult<Future<Registration, CallError>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Registration, CallError>>>> {
         self.register_with_pattern(procedure, callback, MatchingPolicy::Strict)
     }
 
-    pub fn unsubscribe(&mut self, subscription: Subscription) -> WampResult<Future<(), CallError>> {
+    pub fn unsubscribe(
+        &mut self,
+        subscription: Subscription,
+    ) -> Pin<Box<dyn Future<Output = Result<(), CallError>>>> {
         let request_id = self.get_next_session_id();
+
         let mut info = self.connection_info.lock().unwrap();
+
         info.send_message(Message::Unsubscribe(
             request_id,
             subscription.subscription_id,
-        ))?;
-        let (complete, future) = Future::<(), CallError>::pair();
+        ))
+        .unwrap();
+
+        let (complete, receiver) = oneshot::channel();
+
         info.unsubscription_requests
             .insert(request_id, (complete, subscription.subscription_id));
-        Ok(future)
+
+        Box::pin(async {
+            receiver.await.unwrap_or(Err(CallError {
+                reason: Reason::InternalError,
+                args: None,
+                kwargs: None,
+            }))
+        })
     }
 
-    pub fn unregister(&mut self, registration: Registration) -> WampResult<Future<(), CallError>> {
+    pub fn unregister(
+        &mut self,
+        registration: Registration,
+    ) -> Pin<Box<dyn Future<Output = Result<(), CallError>>>> {
         let request_id = self.get_next_session_id();
+
         let mut info = self.connection_info.lock().unwrap();
+
         info.send_message(Message::Unregister(
             request_id,
             registration.registration_id,
-        ))?;
-        let (complete, future) = Future::<(), CallError>::pair();
+        ))
+        .unwrap();
+
+        let (complete, receiver) = oneshot::channel();
 
         info.unregistration_requests
             .insert(request_id, (complete, registration.registration_id));
-        Ok(future)
+
+        Box::pin(async {
+            receiver.await.unwrap_or(Err(CallError {
+                reason: Reason::InternalError,
+                args: None,
+                kwargs: None,
+            }))
+        })
     }
 
     pub fn publish(
@@ -884,17 +926,18 @@ impl Client {
         kwargs: Option<Dict>,
     ) -> WampResult<()> {
         info!("Publishing to {:?} with {:?} | {:?}", topic, args, kwargs);
+
         let request_id = self.get_next_session_id();
-        self.connection_info
-            .lock()
-            .unwrap()
-            .send_message(Message::Publish(
-                request_id,
-                PublishOptions::new(false),
-                topic,
-                args,
-                kwargs,
-            ))
+
+        let info = self.connection_info.lock().unwrap();
+
+        info.send_message(Message::Publish(
+            request_id,
+            PublishOptions::new(false),
+            topic,
+            args,
+            kwargs,
+        ))
     }
 
     pub fn call(
@@ -902,20 +945,33 @@ impl Client {
         procedure: URI,
         args: Option<List>,
         kwargs: Option<Dict>,
-    ) -> WampResult<Future<(List, Dict), CallError>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(List, Dict), CallError>>>> {
         info!("Calling {:?} with {:?} | {:?}", procedure, args, kwargs);
+
         let request_id = self.get_next_session_id();
-        let (complete, future) = Future::<(List, Dict), CallError>::pair();
+
+        let (complete, receiver) = oneshot::channel();
+
         let mut info = self.connection_info.lock().unwrap();
+
         info.call_requests.insert(request_id, complete);
+
         info.send_message(Message::Call(
             request_id,
             CallOptions::new(),
             procedure,
             args,
             kwargs,
-        ))?;
-        Ok(future)
+        ))
+        .unwrap();
+
+        Box::pin(async {
+            receiver.await.unwrap_or(Err(CallError {
+                reason: Reason::InternalError,
+                args: None,
+                kwargs: None,
+            }))
+        })
     }
 
     pub fn publish_and_acknowledge(
@@ -923,38 +979,70 @@ impl Client {
         topic: URI,
         args: Option<List>,
         kwargs: Option<Dict>,
-    ) -> WampResult<Future<ID, CallError>> {
+    ) -> Pin<Box<dyn Future<Output = Result<ID, CallError>>>> {
         info!("Publishing to {:?} with {:?} | {:?}", topic, args, kwargs);
+
         let request_id = self.get_next_session_id();
-        let (complete, future) = Future::<ID, CallError>::pair();
+
+        let (complete, receiver) = oneshot::channel();
+
         let mut info = self.connection_info.lock().unwrap();
+
         info.publish_requests.insert(request_id, complete);
+
         info.send_message(Message::Publish(
             request_id,
             PublishOptions::new(true),
             topic,
             args,
             kwargs,
-        ))?;
-        Ok(future)
+        ))
+        .unwrap();
+
+        Box::pin(async {
+            receiver.await.unwrap_or(Err(CallError {
+                reason: Reason::InternalError,
+                args: None,
+                kwargs: None,
+            }))
+        })
     }
 
-    pub fn shutdown(&mut self) -> WampResult<Future<(), CallError>> {
+    pub fn shutdown(&mut self) -> Pin<Box<dyn Future<Output = Result<(), CallError>>>> {
         let mut info = self.connection_info.lock().unwrap();
+
         if info.connection_state == ConnectionState::Connected {
             info.connection_state = ConnectionState::ShuttingDown;
-            let (complete, future) = Future::pair();
+
+            let (complete, receiver) = oneshot::channel();
+
             info.shutdown_complete = Some(complete);
+
             // TODO add timeout in case server doesn't respond.
             info.send_message(Message::Goodbye(
                 ErrorDetails::new(),
                 Reason::SystemShutdown,
-            ))?;
-            Ok(future)
+            ))
+            .unwrap();
+
+            Box::pin(async {
+                receiver.await.unwrap_or(Err(CallError {
+                    reason: Reason::InternalError,
+                    args: None,
+                    kwargs: None,
+                }))
+            })
         } else {
-            Err(Error::new(ErrorKind::InvalidState(
-                "Tried to shut down a client that was already shutting down",
-            )))
+            Box::pin(async {
+                // Err(Error::new(ErrorKind::InvalidState(
+                //     "Tried to shut down a client that was already shutting down",
+                // )))
+                Err(CallError {
+                    reason: Reason::InternalError,
+                    args: None,
+                    kwargs: None,
+                })
+            })
         }
     }
 }

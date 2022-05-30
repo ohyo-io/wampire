@@ -1,12 +1,13 @@
-use std::collections::HashMap;
-use std::marker::Sync;
-use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    marker::Sync,
+    sync::{Arc, Mutex},
+    thread::{self, JoinHandle},
+    time::Duration,
+};
 
 use log::{debug, info, trace};
-use rand::distributions::{Distribution, Range};
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 use ws::{listen as ws_listen, Result as WSResult, Sender};
 
 use crate::messages::{ErrorDetails, Message, Reason};
@@ -75,8 +76,7 @@ static WAMP_MSGPACK: &str = "wamp.2.msgpack";
 fn random_id() -> u64 {
     let mut rng = thread_rng();
     // TODO make this a constant
-    let between = Range::new(0, 1u64.rotate_left(56) - 1);
-    between.sample(&mut rng)
+    rng.gen_range(0..1u64.rotate_left(56) - 1)
 }
 
 unsafe impl Sync for Router {}

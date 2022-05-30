@@ -1,7 +1,5 @@
 use std::fmt;
 
-use serde;
-
 use crate::URI;
 
 use super::{Dict, List};
@@ -28,13 +26,14 @@ pub enum Reason {
     NetworkFailure,
     NormalClose,
     CustomReason(URI),
+    InternalError, // general case internal error
 }
 
 #[derive(Debug)]
 pub struct CallError {
-    reason: Reason,
-    args: Option<List>,
-    kwargs: Option<Dict>,
+    pub(crate) reason: Reason,
+    pub(crate) args: Option<List>,
+    pub(crate) kwargs: Option<Dict>,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug)]
@@ -105,6 +104,7 @@ impl Reason {
             Reason::NetworkFailure => "wamp.error.network_failure",
             Reason::NormalClose => "wamp.close.normal",
             Reason::CustomReason(ref reason) => &reason.uri,
+            Reason::InternalError => "Client internal error",
         }
     }
 }
@@ -115,9 +115,7 @@ impl fmt::Display for Reason {
     }
 }
 
-/*-------------------------
-         Reason
--------------------------*/
+// Reason
 
 impl serde::Serialize for Reason {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -174,9 +172,7 @@ impl<'de> serde::de::Visitor<'de> for ReasonVisitor {
     }
 }
 
-/*-------------------------
-         ErrorType
--------------------------*/
+// ErrorType
 
 impl serde::Serialize for ErrorType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

@@ -1,7 +1,5 @@
 use std::fmt;
 
-use serde;
-
 pub use crate::messages::types::*;
 use crate::ID;
 
@@ -538,18 +536,18 @@ impl<'de> serde::de::Visitor<'de> for MessageVisitor {
 
 #[cfg(test)]
 mod test {
-    use super::types::{
-        CallOptions, ClientRoles, ErrorDetails, ErrorType, EventDetails, HelloDetails,
-        InvocationDetails, PublishOptions, Reason, RegisterOptions, ResultDetails, RouterRoles,
-        SubscribeOptions, Value, WelcomeDetails, YieldOptions, URI,
-    };
-    use super::Message;
-    use crate::utils::StructMapWriter;
-    use rmp_serde::Deserializer as RMPDeserializer;
-    use rmp_serde::Serializer;
+    use rmp_serde::{Deserializer as RMPDeserializer, Serializer};
     use serde::{Deserialize, Serialize};
-    use serde_json;
     use std::collections::HashMap;
+
+    use super::{
+        types::{
+            CallOptions, ClientRoles, ErrorDetails, ErrorType, EventDetails, HelloDetails,
+            InvocationDetails, PublishOptions, Reason, RegisterOptions, ResultDetails, RouterRoles,
+            SubscribeOptions, Value, WelcomeDetails, YieldOptions, URI,
+        },
+        Message,
+    };
 
     macro_rules! two_way_test {
         ($message:expr, $s:expr) => {{
@@ -558,7 +556,7 @@ mod test {
             assert_eq!(serde_json::from_str::<Message>($s).unwrap(), message);
             let mut buf: Vec<u8> = Vec::new();
             message
-                .serialize(&mut Serializer::with(&mut buf, StructMapWriter))
+                .serialize(&mut Serializer::new(&mut buf).with_struct_map())
                 .unwrap();
             let mut de = RMPDeserializer::new(&buf[..]);
             let new_message: Message = Deserialize::deserialize(&mut de).unwrap();

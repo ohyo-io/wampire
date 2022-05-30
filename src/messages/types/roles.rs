@@ -18,9 +18,8 @@ pub struct RouterRoles {
     pub broker: BrokerRole,
 }
 
-/**************************
-          Roles
-**************************/
+// Roles
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct PublisherRole {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -74,9 +73,7 @@ pub struct BrokerFeatures {
     pattern_based_subscription: bool,
 }
 
-/**************************
-      Implementations
-**************************/
+//   Implementations
 
 impl RouterRoles {
     #[inline]

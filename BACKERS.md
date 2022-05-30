@@ -10,5 +10,5 @@ you'd like to join them, please consider:
 
 #### What's is Patreon?
 
-Funds donated via Patreon go directly to support Dudochkin You's full-time work on Wampire. Your 
+Funds donated via Patreon go directly to support Dudochkin's full-time work on Wampire. Your 
 name/logo will receive proper recognition and exposure by donating on either platform.

@@ -1,12 +1,17 @@
-use std::io;
-use std::sync::{Arc, Mutex};
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+use std::{
+    io,
+    sync::{Arc, Mutex},
+};
 
-use env_logger;
-use eventual::Async;
 use log::info;
 
-use wampire::client::{Client, Connection, Subscription};
-use wampire::{MatchingPolicy, Value, URI};
+use wampire::{
+    client::{Client, Connection, Subscription},
+    MatchingPolicy, Value, URI,
+};
 
 enum Command {
     Sub,
@@ -55,7 +60,7 @@ fn process_input(input: &str) -> (Command, Vec<String>) {
     (command, args)
 }
 
-fn subscribe(
+async fn subscribe(
     client: &mut Client,
     subscriptions: &mut Arc<Mutex<Vec<Subscription>>>,
     args: &[String],
@@ -92,17 +97,16 @@ fn subscribe(
             }),
             policy,
         )
-        .unwrap()
+        .await
         .and_then(move |subscription| {
             println!("Subscribed to topic {}", subscription.topic.uri);
             subscriptions.lock().unwrap().push(subscription);
             Ok(())
         })
-        .r#await()
         .unwrap();
 }
 
-fn unsubscribe(
+async fn unsubscribe(
     client: &mut Client,
     subscriptions: &mut Arc<Mutex<Vec<Subscription>>>,
     args: &[String],
@@ -124,12 +128,11 @@ fn unsubscribe(
             let topic = subscription.topic.uri.clone();
             client
                 .unsubscribe(subscription)
-                .unwrap()
+                .await
                 .and_then(move |()| {
                     println!("Successfully unsubscribed from {}", topic);
                     Ok(())
                 })
-                .r#await()
                 .unwrap();
         }
         Err(_) => {
@@ -145,7 +148,7 @@ fn list(subscriptions: &Arc<Mutex<Vec<Subscription>>>) {
     }
 }
 
-fn publish(client: &mut Client, args: &[String]) {
+async fn publish(client: &mut Client, args: &[String]) {
     if args.is_empty() {
         println!("Please specify a topic to publish to");
     }
@@ -159,8 +162,7 @@ fn publish(client: &mut Client, args: &[String]) {
         .collect();
     client
         .publish_and_acknowledge(URI::new(uri), Some(args), None)
-        .unwrap()
-        .r#await()
+        .await
         .unwrap();
 }
 
@@ -183,16 +185,16 @@ fn help() {
     println!("       Sends a goodbye message and quits the program");
 }
 
-fn event_loop(mut client: Client) {
+async fn event_loop(mut client: Client) {
     let mut subscriptions = Arc::new(Mutex::new(Vec::new()));
     loop {
         print_prompt();
         let input = get_input_from_user();
         let (command, args) = process_input(&input);
         match command {
-            Command::Sub => subscribe(&mut client, &mut subscriptions, &args),
-            Command::Pub => publish(&mut client, &args),
-            Command::Unsub => unsubscribe(&mut client, &mut subscriptions, &args),
+            Command::Sub => subscribe(&mut client, &mut subscriptions, &args).await,
+            Command::Pub => publish(&mut client, &args).await,
+            Command::Unsub => unsubscribe(&mut client, &mut subscriptions, &args).await,
             Command::List => list(&subscriptions),
             Command::Help => help(),
             Command::Quit => break,
@@ -200,15 +202,16 @@ fn event_loop(mut client: Client) {
             Command::Invalid(bad_command) => print!("Invalid command: {}", bad_command),
         }
     }
-    client.shutdown().unwrap().r#await().unwrap();
+    client.shutdown().await.unwrap();
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
     let connection = Connection::new("ws://127.0.0.1:8090/ws", "wampire_realm");
     info!("Connecting");
     let client = connection.connect().unwrap();
 
     info!("Connected");
-    event_loop(client);
+    event_loop(client).await
 }

@@ -2,14 +2,15 @@ use std::sync::Arc;
 
 use log::{debug, info};
 
-use crate::messages::{
-    CallOptions, ErrorType, InvocationDetails, Message, Reason, RegisterOptions, ResultDetails,
-    YieldOptions, URI,
+use crate::{
+    messages::{
+        CallOptions, ErrorType, InvocationDetails, Message, Reason, RegisterOptions, ResultDetails,
+        YieldOptions, URI,
+    },
+    Dict, Error, ErrorKind, List, MatchingPolicy, WampResult, ID,
 };
-use crate::{Dict, Error, ErrorKind, List, MatchingPolicy, WampResult, ID};
 
-use super::messaging::send_message;
-use super::{random_id, ConnectionHandler};
+use super::{messaging::send_message, random_id, ConnectionHandler};
 
 mod patterns;
 pub use self::patterns::RegistrationPatternNode;

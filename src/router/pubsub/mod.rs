@@ -2,13 +2,12 @@ use std::sync::Arc;
 
 use log::{debug, info};
 
-use crate::messages::{
-    ErrorType, EventDetails, Message, PublishOptions, Reason, SubscribeOptions, URI,
+use crate::{
+    messages::{ErrorType, EventDetails, Message, PublishOptions, Reason, SubscribeOptions, URI},
+    Dict, Error, ErrorKind, List, MatchingPolicy, WampResult,
 };
-use crate::{Dict, Error, ErrorKind, List, MatchingPolicy, WampResult};
 
-use super::messaging::send_message;
-use super::{random_id, ConnectionHandler};
+use super::{messaging::send_message, random_id, ConnectionHandler};
 
 mod patterns;
 pub use self::patterns::SubscriptionPatternNode;

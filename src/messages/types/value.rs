@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 use itertools::Itertools;
-use serde;
 
 use crate::CallResult;
 
@@ -279,9 +277,8 @@ impl<'de> serde::de::Visitor<'de> for ValueVisitor {
     }
 }
 
-/*-------------------------
-         Value
--------------------------*/
+// Value
+
 impl serde::Serialize for Value {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -308,9 +305,7 @@ impl<'de> serde::Deserialize<'de> for Value {
     }
 }
 
-/*-------------------------
-         URI
--------------------------*/
+// URI
 
 impl serde::Serialize for URI {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
