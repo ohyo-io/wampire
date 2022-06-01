@@ -62,7 +62,6 @@ Below you’ll find a table comparing WAMP to other technologies according to *
 
 See also: [Web Technologies for the Internet of Things](http://iotiran.com/media/k2/attachments/web-technologies.pdf) - A master thesis which contains a comparison of WAMP, MQTT, CoAP, REST, SOAP, STOMP and MBWS for IoT applications.
 
-|     |     |     |     |     |     |     |
 | --- | --- | --- | --- | --- | --- | --- |
 | Technology | PubSub | RPC | Routed RPC | Web native | Cross Language | Open Standard |
 | WAMP                          | ✔    | ✔   | ✔   | ✔   | ✔   | ✔   |
