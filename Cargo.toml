@@ -22,7 +22,7 @@ serde_json = "1.0"
 url = "2.2"
 log = "0.4"
 env_logger = "0.9"
-ws = "0.9"
+# ws = "0.9"
 rmp = "0.8"
 rmp-serde = "1.1"
 rand = "0.8"
@@ -30,10 +30,12 @@ futures = "0.3"
 itertools = "0.10"
 argparse = "0.2.1"
 intmap = "0.7.1"
+parity-ws = "0.11"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 
 [features]
 default = []
-ssl = ["ws/ssl"]
+# ssl = ["ws/ssl"]
+ssl = ["parity-ws/ssl"]

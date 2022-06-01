@@ -8,7 +8,7 @@ use log::{debug, error, info, trace};
 use rmp_serde::{Deserializer as RMPDeserializer, Serializer};
 use serde::{Deserialize, Serialize};
 
-use ws::{
+use parity_ws::{
     CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler, Message as WSMessage, Request,
     Response, Result as WSResult, Sender,
 };

@@ -93,7 +93,7 @@ use log::{debug, error, info, trace, warn};
 use rmp_serde::{Deserializer as RMPDeserializer, Serializer};
 use serde::{Deserialize, Serialize};
 use url::Url;
-use ws::{
+use parity_ws::{
     connect, util::Token, CloseCode, Error as WSError, ErrorKind as WSErrorKind, Handler,
     Handshake, Message as WSMessage, Request, Result as WSResult, Sender,
 };

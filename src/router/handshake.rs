@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use log::{debug, info, warn};
-use ws::{
+use parity_ws::{
     CloseCode, Error as WSError, ErrorKind as WSErrorKind, Request, Response, Result as WSResult,
 };
 

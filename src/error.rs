@@ -3,7 +3,7 @@ use std::{fmt, sync::mpsc::SendError};
 use rmp_serde::decode::Error as MsgPackError;
 use serde_json::Error as JSONError;
 use url::ParseError;
-use ws::Error as WSError;
+use parity_ws::Error as WSError;
 
 use crate::messages::{self, Reason};
 

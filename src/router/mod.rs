@@ -177,7 +177,7 @@ use std::{
 
 use log::{debug, info, trace};
 use rand::{thread_rng, Rng};
-use ws::{listen as ws_listen, Result as WSResult, Sender};
+use parity_ws::{listen as ws_listen, Result as WSResult, Sender};
 
 use crate::messages::{ErrorDetails, Message, Reason};
 
