@@ -6,16 +6,23 @@ use crate::CallResult;
 
 use super::{CallError, Reason};
 
+/// Alias for HashMap of [Value]'s
 pub type Dict = HashMap<String, Value>;
+
+/// Alias for Vec of [Value]'s
 pub type List = Vec<Value>;
 
 // TODO properly implement Hash and Eq
+
+/// Represents URI
 #[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub struct URI {
+    /// URI string
     pub uri: String,
 }
 
 impl URI {
+    /// Create new URI with param
     pub fn new(uri: &str) -> URI {
         URI {
             uri: uri.to_string(),
@@ -23,30 +30,45 @@ impl URI {
     }
 }
 
+/// Represents Wamp Value
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     // The ID and URI types cannot be distinguished from string and integer types respectively.
     // So, we just ignore them here
+    /// Dictionary value
     Dict(Dict),
+    /// Integer value
     Integer(i64),
+    /// Unsigned integer value
     UnsignedInteger(u64),
+    /// Float value
     Float(f64),
+    /// String value
     String(String),
+    /// List value
     List(List),
+    /// Boolean value
     Boolean(bool),
 }
 
 struct URIVisitor;
 struct ValueVisitor;
 
+/// Defines Argument List functonality
 pub trait ArgList {
+    /// Retrieve value as i64 by index
     fn get_int(&self, index: usize) -> CallResult<Option<i64>>;
+    /// Retrieve value as string by index
     fn get_string(&self, index: usize) -> CallResult<Option<&str>>;
+    /// Verify argument list length
     fn verify_len(&self, expected_len: usize) -> CallResult<()>;
 }
 
+/// Defines Argument Dictionary functonality
 pub trait ArgDict {
+    /// Retrieve value as i64 by key
     fn get_int(&self, key: &str) -> CallResult<Option<i64>>;
+    /// Retrieve value as i64 by key
     fn get_string<'a>(&'a self, key: &str) -> CallResult<Option<&'a str>>;
 }
 
@@ -154,6 +176,7 @@ impl ArgDict for Dict {
 }
 
 impl Value {
+    /// Represent Value as string
     pub fn summarize(&self) -> String {
         match *self {
             Value::Dict(ref d) => {

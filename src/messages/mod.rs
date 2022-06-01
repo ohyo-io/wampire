@@ -1,9 +1,9 @@
 use std::fmt;
 
-pub use crate::messages::types::*;
 use crate::ID;
 
 mod types;
+pub use self::types::*;
 
 macro_rules! try_or {
     ($e:expr, $msg:expr) => {

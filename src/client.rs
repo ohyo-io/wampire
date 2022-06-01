@@ -1,3 +1,78 @@
+//! ## WebSocket[](#websocket "Permalink to this headline")
+//! 
+//! The WebSocket protocol brings bi-directional (soft) real-time and wire traffic efficient connections to the browser. 
+//! Today (2018) WebSocket is universally supported in browsers, network equipment, servers and client languages.
+//! 
+//! Despite having opened completely new possibilities on the Web, WebSocket defines an API for 
+//! application developers at the *message* level, and *point-to-point*, requiring users who want to use 
+//! WebSocket connections in their applications to define their own semantics on top of it.
+//! 
+//! The Web Application Messaging Protocol (WAMP) aims to provide application developers with the right level of semantics, 
+//! with what they need to handle messaging and communication between components in distributed applications at 
+//! a convenient and abstracted way.
+//! 
+//! WAMP was initially defined as a WebSocket sub-protocol, which provided **Publish & Subscribe (PubSub)** functionality 
+//! as well as **routed Remote Procedure Calls (rRPC)** for procedures implemented in a WAMP router. 
+//! Feedback from implementers and users of this was included in a second version of the protocol which this document defines. 
+//! Among the changes was that WAMP can now run over any transport which is message-oriented, ordered, reliable, and bi-directional.
+//! 
+//! > If you want to read more about WebSocket, we recommend two blog posts of the creators of WAMP;)
+//! > 
+//! > - [WebSocket - Why, what, and - can I use it?][1]
+//! > - [Dissecting WebSocket’s Overhead][2]
+//!   
+//! ## WAMP[](#wamp "Permalink to this headline")
+//! 
+//! WAMP is a routed protocol, with all components connecting to a WAMP Router, where the WAMP Router performs message 
+//! routing between the components, and provides two messaging patterns in one Web native protocol:
+//! 
+//! - **Publish & Subscribe (PubSub)** and
+//! - routed **Remote Procedure Calls (rRPC)**
+//!   
+//! Publish & Subscribe (PubSub) is an established messaging pattern where a component, the Subscriber, informs the router 
+//! that it wants to receive information on a topic (i.e., it subscribes to a topic). Another component, a Publisher, 
+//! can then publish to this topic, and the router distributes events to all Subscribers.
+//! 
+//! Routed Remote Procedure Calls (rRPCs) rely on the same sort of decoupling that is used by the Publish & Subscribe pattern. 
+//! A component, the Callee, announces to the router that it provides a certain procedure, identified by a procedure name. 
+//! Other components, Callers, can then call the procedure, with the router invoking the procedure on the Callee, 
+//! receiving the procedure’s result, and then forwarding this result back to the Caller. Routed RPCs differ from 
+//! traditional client-server RPCs in that the router serves as an intermediary between the Caller and the Callee.
+//! 
+//! **Advantages of decoupling and routed RPCs**
+//! 
+//! The decoupling in routed RPCs arises from the fact that the Caller is no longer required to have knowledge of the Callee; 
+//! it merely needs to know the identifier of the procedure it wants to call. There no longer is a need for a direct network connection 
+//! or path between the caller and the callee, since all messages are routed at the WAMP level.
+//! 
+//! This approach enables a whole range of possibilities:
+//! 
+//! - calling into procedures in components which are not reachable from outside at the network level (e.g. on a NATted connection), 
+//! but which can establish an outgoing network connection to the WAMP router.
+//!   
+//! - This decoupling of transport and application layer traffic allows a “reversal of command” where a 
+//! cloud-based system can securely control remote devices
+//! - It also allows to treat frontend and backend components (microservices) the same, and it even allows 
+//! to develop backend code in the browser ([Free Your Code - Backends in the Browser][3]).
+//! - Since no ports on edge devices need to be opened for WAMP to work (in both directions), 
+//! the remote attack surface of these (potentially many) devices is completely closed ([Security in the IoT][4]).
+//!   
+//! - Finally, since the Caller is not aware where, or even who is processing the call (and it should not care!), 
+//! it is easily possible to make application components highly-available (using hot standby components) 
+//! or scale-out application components ([Scaling microservices with Crossbar.io][5]).
+//!   
+//! **Summary**
+//! 
+//! Combining the Publish & Subscribe and routed Remote Procedure Calls in one Web native, real-time transport protocol (WebSocket) 
+//! allows WAMP to be used for the entire messaging requirements of component and microservice based applications, reducing technology 
+//! stack complexity and overhead, providing a capable and secure fundament for applications to rely on.
+//! 
+//! [1]: https://crossbario.com/blog/Websocket-Why-What-Can-I-Use-It/
+//! [2]: https://crossbario.com/blog/Dissecting-Websocket-Overhead/
+//! [3]: https://crossbario.com/blog/Free-Your-Code-Backends-in-the-Browser/
+//! [4]: https://crossbario.com/static/presentations/iot-security/index.html
+//! [5]: https://crossbario.com/static/presentations/microservices/index.html
+
 #![allow(dead_code)]
 #![allow(unused_imports)]
 use std::{
@@ -34,17 +109,22 @@ use crate::{
 
 const CONNECTION_TIMEOUT: Token = Token(124);
 
+/// Represents Wamp connection
 pub struct Connection {
     realm: URI,
     url: String,
 }
 
+/// Represents Wamp subcription
 pub struct Subscription {
+    /// Topic URI
     pub topic: URI,
     subscription_id: ID,
 }
 
+/// Represents Wamp registration
 pub struct Registration {
+    /// Procedure URI
     pub procedure: URI,
     registration_id: ID,
 }
@@ -59,6 +139,7 @@ struct RegistrationCallbackWrapper {
 
 type Complete<T> = oneshot::Sender<Result<T, CallError>>;
 
+/// Alias for Wamp callback
 pub type Callback = Box<dyn FnMut(List, Dict) -> CallResult<(Option<List>, Option<Dict>)>>;
 
 static WAMP_JSON: &str = "wamp.2.json";
@@ -86,11 +167,13 @@ unsafe impl<'a> Send for RegistrationCallbackWrapper {}
 
 unsafe impl<'a> Sync for RegistrationCallbackWrapper {}
 
+/// Represents Wamp Client
 pub struct Client {
     connection_info: Arc<Mutex<ConnectionInfo>>,
     max_session_id: ID,
 }
 
+/// Represents connection handler
 pub struct ConnectionHandler {
     connection_info: Arc<Mutex<ConnectionInfo>>,
     realm: URI,
@@ -142,6 +225,7 @@ impl MessageSender for ConnectionInfo {
 }
 
 impl Connection {
+    /// Create new connection with uri and realm
     pub fn new(url: &str, realm: &str) -> Connection {
         Connection {
             realm: URI::new(realm),
@@ -149,6 +233,7 @@ impl Connection {
         }
     }
 
+    /// Connect to router
     pub fn connect(&self) -> WampResult<Client> {
         let (tx, rx) = channel();
         let url = self.url.clone();
@@ -810,6 +895,7 @@ impl Client {
         })
     }
 
+    /// Subscribe to topic
     pub fn subscribe(
         &mut self,
         topic: URI,
@@ -855,6 +941,7 @@ impl Client {
         })
     }
 
+    /// Register procedure with callback
     pub fn register(
         &mut self,
         procedure: URI,
@@ -863,6 +950,7 @@ impl Client {
         self.register_with_pattern(procedure, callback, MatchingPolicy::Strict)
     }
 
+    /// Unsubscribe from topic
     pub fn unsubscribe(
         &mut self,
         subscription: Subscription,
@@ -891,6 +979,7 @@ impl Client {
         })
     }
 
+    /// Unregister procedure 
     pub fn unregister(
         &mut self,
         registration: Registration,
@@ -919,6 +1008,7 @@ impl Client {
         })
     }
 
+    /// Publish to topic
     pub fn publish(
         &mut self,
         topic: URI,
@@ -940,6 +1030,7 @@ impl Client {
         ))
     }
 
+    /// Call the procedure
     pub fn call(
         &mut self,
         procedure: URI,
@@ -974,6 +1065,7 @@ impl Client {
         })
     }
 
+    /// Publish to topic and acknowledge
     pub fn publish_and_acknowledge(
         &mut self,
         topic: URI,
@@ -1008,6 +1100,7 @@ impl Client {
         })
     }
 
+    /// Disconnect from router gracefully 
     pub fn shutdown(&mut self) -> Pin<Box<dyn Future<Output = Result<(), CallError>>>> {
         let mut info = self.connection_info.lock().unwrap();
 

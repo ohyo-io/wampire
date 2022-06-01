@@ -4,31 +4,55 @@ use crate::URI;
 
 use super::{Dict, List};
 
+
+/// Represents error reasons
 #[derive(Hash, Eq, PartialEq, Debug)]
 pub enum Reason {
+    /// Invalid URI
     InvalidURI,
+    /// No such procedure
     NoSuchProcedure,
+    /// Procedure already exists
     ProcedureAlreadyExists,
+    /// No such registration
     NoSuchRegistration,
+    /// No such subscription
     NoSuchSubscription,
+    /// Invalid argument
     InvalidArgument,
+    /// System shutdown
     SystemShutdown,
+    /// Close realm
     CloseRealm,
+    /// Goodbye and out
     GoodbyeAndOut,
+    /// Not authorized
     NotAuthorized,
+    /// Authorization failed
     AuthorizationFailed,
+    /// No such realm
     NoSuchRealm,
+    /// No such role
     NoSuchRole,
+    /// Cancelled
     Cancelled,
+    /// Option not allowed
     OptionNotAllowed,
+    /// No eligible callee
     NoEligibleCallee,
+    /// DiscloseMe option disallowed
     OptionDisallowedDiscloseMe,
+    /// Network failure 
     NetworkFailure,
+    /// Normal close
     NormalClose,
+    /// Custom reason
     CustomReason(URI),
-    InternalError, // general case internal error
+    /// General case internal error
+    InternalError,
 }
 
+/// Represens Wamp calling error
 #[derive(Debug)]
 pub struct CallError {
     pub(crate) reason: Reason,
@@ -48,6 +72,7 @@ pub enum ErrorType {
 }
 
 impl CallError {
+    /// Create new Wamp calling error with params. Obsolete
     #[inline]
     pub fn new(reason: Reason, args: Option<List>, kwargs: Option<Dict>) -> CallError {
         CallError {
@@ -57,20 +82,24 @@ impl CallError {
         }
     }
 
+    /// Represents error as tupple
     pub fn into_tuple(self) -> (Reason, Option<List>, Option<Dict>) {
         (self.reason, self.args, self.kwargs)
     }
 
+    /// Retrieve reason of error
     #[inline]
     pub fn get_reason(&self) -> &Reason {
         &self.reason
     }
 
+    /// Retrieve args of error
     #[inline]
     pub fn get_args(&self) -> &Option<List> {
         &self.args
     }
 
+    /// Retrieve kwargs error
     #[inline]
     pub fn get_kwargs(&self) -> &Option<Dict> {
         &self.kwargs

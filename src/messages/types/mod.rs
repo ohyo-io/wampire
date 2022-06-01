@@ -33,15 +33,15 @@ pub enum MatchingPolicy {
 /// The policies that dictate how invocations are distributed amongst shared registrations
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum InvocationPolicy {
-    // Only one reigistration per uri (the default)
+    /// Only one reigistration per uri (the default)
     Single,
-    // Callee selcted sequentially from the list of registrants
+    /// Callee selcted sequentially from the list of registrants
     RoundRobin,
-    // Callee selcted randomly from the list of registrants
+    /// Callee selcted randomly from the list of registrants
     Random,
-    // First callee (in orer of registration) is called
+    /// First callee (in orer of registration) is called
     First,
-    // Last callee (in order of registration( is called
+    /// Last callee (in order of registration( is called
     Last,
 }
 

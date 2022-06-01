@@ -1,31 +1,101 @@
-# Wampire
+<div align="center">
 
-[![Build Status](https://travis-ci.org/ohyo-io/wampire.svg)](https://travis-ci.org/ohyo-io/wampire)
-[![Crates](https://img.shields.io/badge/crates.io-v0.1.2-orange.svg)](https://crates.io/crates/wampire)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/Y2k3GAW)
+[![](https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/wampire.svg)](#top)
 
-**Wampire** is a [Web Application Messaging Protcol v2](http://wamp-proto.org/) router library, client library, and a router service, 
-that implements most of the features defined in the advanced profile. The wampire project is written 
-in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O. The wampire router 
-provides extended functionality.  The router and client interaction with other WAMP implementations. 
+# Asynchronous Web Application Messaging Protcol (v2)
+
+[![API Docs][docrs-badge]][docrs-url]
+[![Crates.io][crates-badge]][crates-url]
+[![Code coverage][codecov-badge]][codecov-url]
+[![Tests][tests-badge]][tests-url]
+[![MPL-2.0 licensed][license-badge]][license-url]
+[![Gitter chat][gitter-badge]][gitter-url]
+[![loc][loc-badge]][loc-url]
+</div>
+
+[docrs-badge]: https://img.shields.io/docsrs/wampire?style=flat-square
+[docrs-url]: https://docs.rs/wampire/
+[crates-badge]: https://img.shields.io/crates/v/wampire.svg?style=flat-square
+[crates-url]: https://crates.io/crates/wampire
+[license-badge]: https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square
+[license-url]: https://github.com/ohyo-io/wampire/blob/master/LICENSE
+[gitter-badge]: https://img.shields.io/gitter/room/angular_rust/community.svg?style=flat-square
+[gitter-url]: https://gitter.im/angular_rust/community
+[tests-badge]: https://img.shields.io/github/workflow/status/ohyo-io/wampire/Tests?label=tests&logo=github&style=flat-square
+[tests-url]: https://github.com/ohyo-io/wampire/actions/workflows/tests.yml
+[codecov-badge]: https://img.shields.io/codecov/c/github/ohyo-io/wampire?logo=codecov&style=flat-square&token=L7KV27OLY0
+[codecov-url]: https://codecov.io/gh/ohyo-io/wampire
+[loc-badge]: https://img.shields.io/tokei/lines/github/ohyo-io/wampire?style=flat-square
+[loc-url]: https://github.com/ohyo-io/wampire
+
+**Wampire** is a asynchronous [Web Application Messaging Protcol v2](http://wamp-proto.org/) router library, client library, and a router service, that implements most of the features defined in the advanced profile. The wampire project is written in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O. The wampire router provides extended functionality.  The router and client interaction with other WAMP implementations. 
 Project initially forked from [wamp-rs v0.1.0](https://github.com/dyule/wamp-rs).
 
-<p align="center">
-    <img src="https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/wampire_webrtc.png" alt="Wampire logo" width="405" />
-</p>
+## Wamp use-cases
 
-Check the [examples/webrtc-simple](examples/webrtc-simple) folder 
-for nodejs based example using wampire as signaling server for WebRTC connection. 
+- Check the [examples/webrtc-simple](examples/webrtc-simple) folder 
+for example using wampire as signaling server for WebRTC connection. 
+- [Free Your Code - Backends in the Browser](https://crossbario.com/blog/Free-Your-Code-Backends-in-the-Browser/)
+- [Security in the IoT](https://crossbario.com/static/presentations/iot-security/index.html)
+- [Scaling microservices with Crossbar.io](https://crossbario.com/static/presentations/microservices/index.html)
 
-## Supporting Wampire
+## WAMP comparison[](#wamp-compared "Permalink to this headline")
 
-Wampire is an MIT-licensed open source project. It's an independent project with its ongoing development made possible 
-entirely thanks to the support by these awesome [backers](./BACKERS.md). If 
-you'd like to join them, please consider:
+Alright. So how does WAMP stack up versus other technologies?
 
-[![Become a patron](https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/patreon.png)](https://www.patreon.com/dudochkin)
-[![ko-fi](https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/kofi2.png)](https://ko-fi.com/Y8Y3E0YQ)
+Do we really need another wheel? Yes. Please read below to find out why we think so.
+
+Below you’ll find a table comparing WAMP to other technologies according to **six criteria**:
+
+1. **PubSub** Does it support Publish & Subscribe out of the box?
+  
+2. **RPC** Does it support Remote Procedure Calls out of the box?
+  
+3. **Routed RPC** Does it support [routed](https://wamp-proto.org/why/#unified_routing) (not only point-to-point) Remote Procedure Calls?
+  
+4. **Web native** Does it run *natively* on the Web (without tunneling or bridging)?
+  
+5. **Cross Language** Does it work from different programming languages and run-times?
+  
+6. **Open Standard** Is there an open, official specification implemented by different vendors?
+  
+
+See also: [Web Technologies for the Internet of Things](http://iotiran.com/media/k2/attachments/web-technologies.pdf) - A master thesis which contains a comparison of WAMP, MQTT, CoAP, REST, SOAP, STOMP and MBWS for IoT applications.
+
+|     |     |     |     |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- |
+| Technology | PubSub | RPC | Routed RPC | Web native | Cross Language | Open Standard |
+| WAMP                          | ✔    | ✔   | ✔   | ✔   | ✔   | ✔   |
+| [AJAX](#ajax)                 | **-** | ✔   | **-** | ✔   | ✔   | **-** |
+| [AMQP](#amqp)                 | ✔    | (✔) | **-** | **-** | ✔   | ✔   |
+| [Apache Thrift](#thrift)      | **-** | ✔   | **-** | **-** | ✔   | **-** |
+| [Capn’n’Proto](#capnnproto)   | **-** | ✔   | **-** | **-** | ✔   | **-** |
+| [Comet](#comet)               | **-** | **-** | **-** | ✔   | ✔   | **-** |
+| [OMG DDS](#omg-dds)           | ✔    | **-** | **-** | **-** | ✔   | ✔   |
+| [D-Bus](#d-bus)               | ✔    | ✔   | ✔   | **-** | ✔   | ✔   |
+| [CORBA](#corba)               | ✔    | ✔   | **-** | **-** | ✔   | ✔   |
+| [DCOM](#dcom)                 | ✔    | ✔   | **-** | **-** | ✔   | **-** |
+| [Java JMS](#jms)              | ✔    | **-** | **-** | **-** | **-** | ✔   |
+| [Java RMI](#java-rmi)         | **-** | ✔   | **-** | **-** | **-** | ✔   |
+| [JSON-RPC](#json-rpc)         | **-** | ✔   | **-** | ✔   | ✔   | ✔   |
+| [MQTT](#mqtt)                 | ✔    | **-** | **-** | **-** | ✔   | ✔   |
+| [OPC-UA](#opc-ua)             | (✔)  | ✔ |     | **-** | (✔) | ✔   | ✔   |
+| [REST](#rest)                 | **-** | ✔   | **-** | ✔   | ✔   | **-** |
+| [SOAP](#soap)                 | **-** | ✔   | **-** | ✔   | ✔   | ✔   |
+| [socket.io](#socketio)        | ✔    | **-** | **-** | ✔   | **-** | **-** |
+| [SockJS](#sockjs)             | **-** | **-** | **-** | ✔   | ✔   | **-** |
+| [STOMP](#stomp)               | ✔    | **-** | **-** | ✔   | ✔   | ✔   |
+| [XML-RPC](#xml-rpc)           | **-** | ✔   | **-** | ✔   | ✔   | ✔   |
+| [XMPP](#xmpp)                 | ✔    | **-** | **-** | ✔   | ✔   | ✔   |
+| [ZMQ](#zmq)                   | ✔    | **-** | **-** | **-** | ✔   | **-** |
+
+## Implementations
+
+There a lot of implementations for different languages. [Read more..](https://wamp-proto.org/implementations.html)
+
+## Frequently Asked Questions
+[Read more..](https://wamp-proto.org/faq.html)
+
 ## Full Documentation
 
 See the [**Wampire Project Wiki**](https://github.com/ohyo-io/wampire/wiki) for full documentation, examples, and operational details.
@@ -43,17 +113,19 @@ To include in your project, place the following in your `Cargo.toml`
 
 ```toml
 [dependencies]
-wampire = "0.1"
+wampire = "0.2"
 ```
 Wampire uses [serde-rs](https://github.com/serde-rs/serde), which requires Rust 1.15 or greater.
 
 ## Router
+
 To start router in development mode use
 ```bash
 RUST_LOG=info cargo run wampire
 ```
 
 ### Nginx configuration
+
 To pass WebSocket connection to router add it to Nginx config.
 PS. can be used with SSL too.
 ```
@@ -71,7 +143,9 @@ location /ws/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 ```
+
 ### Systemd
+
 Build router:
 1. Clone repo using `git clone https://github.com/ohyo-io/wampire.git`
 2. `cd wampire && cargo build`
@@ -86,7 +160,9 @@ To enable as system service:
 ``` bash
 systemctl enable wampire
 ```
+
 ## Examples
+
 Please see the [examples](examples) directory.
 For instructions on how to check the examples
 
@@ -102,52 +178,7 @@ RUST_LOG=info cargo run --example pubsubclient
 
 ## Advanced Profile Feature Support
 
-### RPC Features
-
-| Feature | Supported |
-| ------- | --------- |
-| progressive_call_results | Yes |
-| progressive_calls | No |
-| call_timeout | Yes |
-| call_canceling | Yes |
-| caller_identification | Yes |
-| call_trustlevels | No |
-| registration_meta_api | Yes
-| pattern_based_registration | Yes |
-| shared_registration | Yes |
-| sharded_registration | No |
-| registration_revocation | No |
-| procedure_reflection | No |
-
-### PubSub Features
-
-| Feature | Supported |
-| ------- | --------- |
-| subscriber_blackwhite_listing | Yes |
-| publisher_exclusion | Yes |
-| publisher_identification | Yes |
-| publication_trustlevels | No|
-| subscription_meta_api | Yes |
-| pattern_based_subscription | Yes |
-| sharded_subscription | No |
-| event_history | No |
-| topic_reflection | No |
-| testament_meta_api | Yes |
-
-### Other Advanced Features
-
-| Feature | Supported |
-| ------- | --------- |
-| challenge-response authentication | Yes |
-| cookie authentication | Yes |
-| ticket authentication | Yes |
-| rawsocket transport | Yes |
-| batched WS transport | No |
-| longpoll transport | No |
-| session meta api | Yes |
-| TLS for websockets | Yes |
-| TLS for rawsockets | Yes |
-| websocket compression | Yes |
+See [FEATURES](./FEATURES.md) for details.
 
 ## Extended Functionality
 
@@ -155,8 +186,15 @@ Wampire provides [extended functionality](https://github.com/ohyo-io/wampire/wik
 around subscriber black/white listing and in the information available via the session meta API.  
 This enhances the ability of clients to make desisions about message recipients.
 
-## Legal
+## Supporting Wampire
 
-### License
+Wampire is an MIT-licensed open source project. It's an independent project with its ongoing development made possible 
+entirely thanks to the support by these awesome [backers](./BACKERS.md). If 
+you'd like to join them, please consider:
+
+[![Become a patron](https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/patreon.png)](https://www.patreon.com/dudochkin)
+[![ko-fi](https://raw.githubusercontent.com/wiki/ohyo-io/wampire/images/kofi2.png)](https://ko-fi.com/Y8Y3E0YQ)
+
+## License
 
 This work is licensed under the MIT license. See [LICENSE](./LICENSE) for details.
