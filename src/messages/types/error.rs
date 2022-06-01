@@ -52,7 +52,7 @@ pub enum Reason {
     InternalError,
 }
 
-/// Represens Wamp calling error
+/// Represens WAMP calling error
 #[derive(Debug)]
 pub struct CallError {
     pub(crate) reason: Reason,
@@ -72,7 +72,7 @@ pub enum ErrorType {
 }
 
 impl CallError {
-    /// Create new Wamp calling error with params. Obsolete
+    /// Create new WAMP calling error with params. Obsolete
     #[inline]
     pub fn new(reason: Reason, args: Option<List>, kwargs: Option<Dict>) -> CallError {
         CallError {

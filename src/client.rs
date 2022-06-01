@@ -109,20 +109,20 @@ use crate::{
 
 const CONNECTION_TIMEOUT: Token = Token(124);
 
-/// Represents Wamp connection
+/// Represents WAMP connection
 pub struct Connection {
     realm: URI,
     url: String,
 }
 
-/// Represents Wamp subcription
+/// Represents WAMP subcription
 pub struct Subscription {
     /// Topic URI
     pub topic: URI,
     subscription_id: ID,
 }
 
-/// Represents Wamp registration
+/// Represents WAMP registration
 pub struct Registration {
     /// Procedure URI
     pub procedure: URI,
@@ -139,7 +139,7 @@ struct RegistrationCallbackWrapper {
 
 type Complete<T> = oneshot::Sender<Result<T, CallError>>;
 
-/// Alias for Wamp callback
+/// Alias for WAMP callback
 pub type Callback = Box<dyn FnMut(List, Dict) -> CallResult<(Option<List>, Option<Dict>)>>;
 
 static WAMP_JSON: &str = "wamp.2.json";
@@ -167,7 +167,7 @@ unsafe impl<'a> Send for RegistrationCallbackWrapper {}
 
 unsafe impl<'a> Sync for RegistrationCallbackWrapper {}
 
-/// Represents Wamp Client
+/// Represents WAMP Client
 pub struct Client {
     connection_info: Arc<Mutex<ConnectionInfo>>,
     max_session_id: ID,

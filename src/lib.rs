@@ -49,7 +49,7 @@ pub use crate::{
 /// Alias for call Result with [CallError]
 pub type CallResult<T> = Result<T, CallError>;
 
-/// Alias for Wamp Result
+/// Alias for WAMP Result
 pub type WampResult<T> = Result<T, Error>;
 
 /// Alias for u64

@@ -31,7 +31,7 @@
 **Wampire** is a asynchronous [Web Application Messaging Protcol v2](http://wamp-proto.org/) router library, client library, and a router service, that implements most of the features defined in the advanced profile. The wampire project is written in [Rust](https://www.rust-lang.org/) and designed for highly concurrent asynchronous I/O. The wampire router provides extended functionality.  The router and client interaction with other WAMP implementations. 
 Project initially forked from [wamp-rs v0.1.0](https://github.com/dyule/wamp-rs).
 
-## Wamp use-cases
+## WAMP use-cases
 
 - Check the [examples/webrtc-simple](examples/webrtc-simple) folder 
 for example using wampire as signaling server for WebRTC connection. 

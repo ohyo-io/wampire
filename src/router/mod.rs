@@ -211,7 +211,7 @@ struct Realm {
     connections: Vec<Arc<Mutex<ConnectionInfo>>>,
 }
 
-/// Represents Wamp Router
+/// Represents WAMP Router
 pub struct Router {
     info: Arc<RouterInfo>,
 }
@@ -228,7 +228,7 @@ struct ConnectionHandler {
     registered_procedures: Vec<ID>,
 }
 
-/// Represents Wamp Router connection information
+/// Represents WAMP Router connection information
 pub struct ConnectionInfo {
     state: ConnectionState,
     sender: Sender,

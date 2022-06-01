@@ -30,7 +30,7 @@ impl URI {
     }
 }
 
-/// Represents Wamp Value
+/// Represents WAMP Value
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     // The ID and URI types cannot be distinguished from string and integer types respectively.
