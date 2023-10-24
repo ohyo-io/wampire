@@ -88,6 +88,7 @@ async fn add(client: &mut Client, args: &[String]) {
             URI::new("ca.test.add"),
             Some(vec![Value::Integer(a), Value::Integer(b)]),
             None,
+            None,
         )
         .await
     {
@@ -103,7 +104,7 @@ async fn add(client: &mut Client, args: &[String]) {
 async fn echo(client: &mut Client, args: Vec<String>) {
     let args = args.into_iter().map(Value::String).collect();
     let result = client
-        .call(URI::new("ca.test.echo"), Some(args), None)
+        .call(URI::new("ca.test.echo"), Some(args), None, None)
         .await;
     println!("Result: {:?}", result);
 }

@@ -33,7 +33,7 @@ pub enum Message {
     Registered(ID, ID),
     Unregister(ID, ID),
     Unregistered(ID),
-    Call(ID, CallOptions, URI, Option<List>, Option<Dict>),
+    Call(ID, Option<Dict>, URI, Option<List>, Option<Dict>),
     Invocation(ID, ID, InvocationDetails, Option<List>, Option<Dict>),
     Yield(ID, YieldOptions, Option<List>, Option<Dict>),
     Result(ID, ResultDetails, Option<List>, Option<Dict>),
@@ -542,7 +542,7 @@ mod test {
 
     use super::{
         types::{
-            CallOptions, ClientRoles, ErrorDetails, ErrorType, EventDetails, HelloDetails,
+            ClientRoles, ErrorDetails, ErrorType, EventDetails, HelloDetails,
             InvocationDetails, PublishOptions, Reason, RegisterOptions, ResultDetails, RouterRoles,
             SubscribeOptions, Value, WelcomeDetails, YieldOptions, URI,
         },
@@ -794,7 +794,7 @@ mod test {
         two_way_test!(
             Message::Call(
                 7_814_135,
-                CallOptions::new(),
+                None,
                 URI::new("com.myapp.ping"),
                 None,
                 None
@@ -805,7 +805,7 @@ mod test {
         two_way_test!(
             Message::Call(
                 764_346,
-                CallOptions::new(),
+                None,
                 URI::new("com.myapp.echo"),
                 Some(vec![Value::String("a value".to_string())]),
                 None
@@ -820,7 +820,7 @@ mod test {
         two_way_test!(
             Message::Call(
                 764_346,
-                CallOptions::new(),
+                None,
                 URI::new("com.myapp.compute"),
                 Some(Vec::new()),
                 Some(kwargs)

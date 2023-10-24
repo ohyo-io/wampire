@@ -147,11 +147,11 @@ impl RegisterOptions {
     }
 }
 
-impl CallOptions {
-    pub fn new() -> CallOptions {
-        CallOptions {}
-    }
-}
+// impl CallOptions {
+//     pub fn new() -> CallOptions {
+//         CallOptions {}
+//     }
+// }
 
 impl YieldOptions {
     pub fn new() -> YieldOptions {
