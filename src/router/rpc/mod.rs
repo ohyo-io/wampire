@@ -4,7 +4,7 @@ use log::{debug, info};
 
 use crate::{
     messages::{
-        CallOptions, ErrorType, InvocationDetails, Message, Reason, RegisterOptions, ResultDetails,
+        ErrorType, InvocationDetails, Message, Reason, RegisterOptions, ResultDetails,
         YieldOptions, URI,
     },
     Dict, Error, ErrorKind, List, MatchingPolicy, WampResult, ID,
@@ -107,7 +107,7 @@ impl ConnectionHandler {
     pub fn handle_call(
         &mut self,
         request_id: ID,
-        _options: CallOptions,
+        _options: Option<Dict>,
         procedure: URI,
         args: Option<List>,
         kwargs: Option<Dict>,

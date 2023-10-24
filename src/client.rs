@@ -1036,6 +1036,7 @@ impl Client {
         procedure: URI,
         args: Option<List>,
         kwargs: Option<Dict>,
+        options: Option<Dict>,
     ) -> Pin<Box<dyn Future<Output = Result<(List, Dict), CallError>>>> {
         info!("Calling {:?} with {:?} | {:?}", procedure, args, kwargs);
 
@@ -1049,7 +1050,7 @@ impl Client {
 
         info.send_message(Message::Call(
             request_id,
-            CallOptions::new(),
+            options,
             procedure,
             args,
             kwargs,
