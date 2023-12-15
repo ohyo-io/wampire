@@ -250,7 +250,7 @@ static WAMP_MSGPACK: &str = "wamp.2.msgpack";
 fn random_id() -> u64 {
     let mut rng = thread_rng();
     // TODO make this a constant
-    rng.gen_range(0..1u64.rotate_left(56) - 1)
+    rng.gen_range(1..1u64.rotate_left(53))
 }
 
 unsafe impl Sync for Router {}
